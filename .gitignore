@@ -1,0 +1,18 @@
+CLAUDE.md
+
+# frontend
+frontend/node_modules/
+frontend/.react-router/
+frontend/build/
+frontend/dist/
+frontend/.env
+frontend/.env.local
+
+# backend
+backend/bin/
+backend/obj/
+backend/*.user
+backend/appsettings.Development.json
+
+# OS
+.DS_Store
