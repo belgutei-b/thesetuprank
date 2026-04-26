@@ -5,19 +5,21 @@ using backend.Data;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.Google;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddOpenApi();
-builder.Services.AddDbContext<AppDbContext>(options => options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"),
-    sqlOptions => sqlOptions.EnableRetryOnFailure()
-));
-
 var jwtKey = builder.Configuration["Jwt:Key"]
     ?? throw new InvalidOperationException("Jwt:Key is not configured");
 var signingKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey));
+
+builder.Services.AddOpenApi();
+
+builder.Services.AddDbContext<AppDbContext>(options => options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"),
+    sqlOptions => sqlOptions.EnableRetryOnFailure()
+));
 
 builder.Services.AddAuthentication(o =>
 {
@@ -27,9 +29,12 @@ builder.Services.AddAuthentication(o =>
 .AddCookie()
 .AddGoogle(o =>
 {
+    // todo: maybe handle if Google:ClientId doens't exist
     o.ClientId = builder.Configuration["Authentication:Google:ClientId"]!;
     o.ClientSecret = builder.Configuration["Authentication:Google:ClientSecret"]!;
 
+    // after google redirects back
+    // OnTicketReceived fires
     o.Events.OnTicketReceived = async ctx =>
     {
         var claims = ctx.Principal?.Claims ?? [];
@@ -41,11 +46,12 @@ builder.Services.AddAuthentication(o =>
         var user = await db.Users.FirstOrDefaultAsync(u => u.Email == email);
         if (user == null)
         {
-            db.Users.Add(new backend.Models.User
+            user = new backend.Models.User
             {
                 Email = email,
                 Name = name,
-            });
+            };
+            db.Users.Add(user);
             await db.SaveChangesAsync();
         }
 
@@ -53,18 +59,18 @@ builder.Services.AddAuthentication(o =>
         var jwt = new JwtSecurityTokenHandler().WriteToken(new JwtSecurityToken(
             issuer: "rate-setup",
             audience: "rate-setup",
-            claims: [new Claim(ClaimTypes.Email, email), new Claim(ClaimTypes.Name, name)],
+            claims: [new Claim(ClaimTypes.Email, email), new Claim(ClaimTypes.Name, name), new Claim(ClaimTypes.NameIdentifier, user.Id.ToString())],
             expires: DateTime.UtcNow.AddDays(7),
             signingCredentials: new SigningCredentials(signingKey, SecurityAlgorithms.HmacSha256)
         ));
 
         ctx.Response.Redirect($"http://localhost:5173/#token={jwt}");
         ctx.HandleResponse();
-        // return Task.CompletedTask;
     };
 })
 .AddJwtBearer(o =>
 {
+    // handles every subsequent API request after google login
     o.TokenValidationParameters = new TokenValidationParameters
     {
         ValidateIssuer = true,
@@ -77,7 +83,14 @@ builder.Services.AddAuthentication(o =>
     };
 });
 
-builder.Services.AddAuthorization();
+// all endpoints require auth by default
+builder.Services.AddAuthorization(options =>
+{
+    options.FallbackPolicy = new AuthorizationPolicyBuilder()
+        .AddAuthenticationSchemes("Bearer")
+        .RequireAuthenticatedUser()
+        .Build();
+});
 
 var app = builder.Build();
 
@@ -87,16 +100,21 @@ if (app.Environment.IsDevelopment())
 app.UseAuthentication();
 app.UseAuthorization();
 
+
+// Public endpoint
+// no authorization required by AllowAnonymous
 app.MapGet("/api/auth/login", ctx =>
     ctx.ChallengeAsync(GoogleDefaults.AuthenticationScheme,
-        new AuthenticationProperties { RedirectUri = "/" }));
+        new AuthenticationProperties { RedirectUri = "/" })
+).AllowAnonymous();
 
 app.MapGet("/api/auth/me", (HttpContext ctx) =>
     Results.Ok(new
     {
         name = ctx.User.FindFirst(ClaimTypes.Name)?.Value,
         email = ctx.User.FindFirst(ClaimTypes.Email)?.Value,
+        id = ctx.User.FindFirst(ClaimTypes.NameIdentifier)?.Value,
     })
-).RequireAuthorization(p => p.AddAuthenticationSchemes("Bearer").RequireAuthenticatedUser());
+);
 
 app.Run();

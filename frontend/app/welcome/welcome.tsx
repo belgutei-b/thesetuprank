@@ -1,7 +1,11 @@
 import { useEffect, useState } from "react";
 
 export function Welcome() {
-  const [user, setUser] = useState<{ name: string; email: string } | null>(null);
+  const [user, setUser] = useState<{
+    name: string;
+    email: string;
+    id: string;
+  } | null>(null);
 
   useEffect(() => {
     const hash = window.location.hash;
@@ -35,7 +39,8 @@ export function Welcome() {
         {user ? (
           <div className="flex flex-col items-center gap-4">
             <p className="text-gray-700 dark:text-gray-200">
-              Signed in as <strong>{user.name}</strong> ({user.email})
+              Signed in as <strong>{user.name}</strong> ({user.email}) (
+              {user.id})
             </p>
             <button
               onClick={logout}
