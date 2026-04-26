@@ -1,14 +1,19 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
+using backend.Data;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.Google;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddOpenApi();
+builder.Services.AddDbContext<AppDbContext>(options => options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"),
+    sqlOptions => sqlOptions.EnableRetryOnFailure()
+));
 
 var jwtKey = builder.Configuration["Jwt:Key"]
     ?? throw new InvalidOperationException("Jwt:Key is not configured");
@@ -25,11 +30,25 @@ builder.Services.AddAuthentication(o =>
     o.ClientId = builder.Configuration["Authentication:Google:ClientId"]!;
     o.ClientSecret = builder.Configuration["Authentication:Google:ClientSecret"]!;
 
-    o.Events.OnTicketReceived = ctx =>
+    o.Events.OnTicketReceived = async ctx =>
     {
         var claims = ctx.Principal?.Claims ?? [];
         var email = claims.FirstOrDefault(c => c.Type == ClaimTypes.Email)?.Value ?? "";
         var name = claims.FirstOrDefault(c => c.Type == ClaimTypes.Name)?.Value ?? "";
+
+        // create user if first time signing in
+        var db = ctx.HttpContext.RequestServices.GetRequiredService<AppDbContext>();
+        var user = await db.Users.FirstOrDefaultAsync(u => u.Email == email);
+        if (user == null)
+        {
+            db.Users.Add(new backend.Models.User
+            {
+                Email = email,
+                Name = name,
+            });
+            await db.SaveChangesAsync();
+        }
+
 
         var jwt = new JwtSecurityTokenHandler().WriteToken(new JwtSecurityToken(
             issuer: "rate-setup",
@@ -41,7 +60,7 @@ builder.Services.AddAuthentication(o =>
 
         ctx.Response.Redirect($"http://localhost:5173/#token={jwt}");
         ctx.HandleResponse();
-        return Task.CompletedTask;
+        // return Task.CompletedTask;
     };
 })
 .AddJwtBearer(o =>
