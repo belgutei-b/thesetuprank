@@ -15,8 +15,6 @@ var jwtKey = builder.Configuration["Jwt:Key"]
     ?? throw new InvalidOperationException("Jwt:Key is not configured");
 var signingKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey));
 
-builder.Services.AddOpenApi();
-
 builder.Services.AddDbContext<AppDbContext>(options => options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"),
     sqlOptions => sqlOptions.EnableRetryOnFailure()
 ));
@@ -94,12 +92,14 @@ builder.Services.AddAuthorization(options =>
 
 var app = builder.Build();
 
-if (app.Environment.IsDevelopment())
-    app.MapOpenApi();
+// Swagger UI pointing to your YAML
+app.UseSwaggerUI(c =>
+{
+    c.SwaggerEndpoint("/openapi.yaml", "Rate Setup API");
+});
 
 app.UseAuthentication();
 app.UseAuthorization();
-
 
 // Public endpoint
 // no authorization required by AllowAnonymous
@@ -107,6 +107,12 @@ app.MapGet("/api/auth/login", ctx =>
     ctx.ChallengeAsync(GoogleDefaults.AuthenticationScheme,
         new AuthenticationProperties { RedirectUri = "/" })
 ).AllowAnonymous();
+
+app.MapGet("/openapi.yaml", async context =>
+{
+    context.Response.ContentType = "application/yaml";
+    await context.Response.SendFileAsync("wwwroot/openapi.yaml");
+}).AllowAnonymous();
 
 app.MapGet("/api/auth/me", (HttpContext ctx) =>
     Results.Ok(new

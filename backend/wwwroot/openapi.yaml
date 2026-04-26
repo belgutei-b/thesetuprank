@@ -1,0 +1,373 @@
+openapi: 3.0.3
+info:
+  title: rate-setup API
+  description: |
+    Backend API for rate-setup — a head-to-head desk-setup voting site.
+    See `ROUTES.md` at the repo root for human-readable design notes.
+  version: 0.1.0
+
+servers:
+  - url: http://localhost:5065
+    description: Local dev
+  - url: https://api.ratesetup.example
+    description: Production (placeholder)
+
+tags:
+  - name: Auth
+    description: Google OAuth + current-user lookup
+  - name: Setups
+    description: A user's own setup posts (CRUD)
+  - name: Saves
+    description: Saving / unsaving other users' setups
+  - name: Featured
+    description: Setup of the Day
+  - name: Vote
+    description: Head-to-head pair fetch + submit
+  - name: Dashboard
+    description: Public leaderboard
+  - name: Users
+    description: Public profile pages
+
+# ─────────────────────────────────────────────────────────────────────
+# Paths
+# ─────────────────────────────────────────────────────────────────────
+paths:
+  # ── Auth ──────────────────────────────────────────────────────────
+  /api/auth/login:
+    get:
+      tags: [Auth]
+      summary: Start Google OAuth flow
+      security: []
+      responses:
+        "302":
+          description: Redirect to Google consent screen
+
+  /api/auth/me:
+    get:
+      tags: [Auth]
+      summary: Current user from JWT
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Me"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /api/auth/logout:
+    post:
+      tags: [Auth]
+      summary: Clear cookie / signal client to drop JWT
+      responses:
+        "204":
+          description: Logged out
+
+  # ── Setups (own) ──────────────────────────────────────────────────
+  /api/setups:
+    get:
+      tags: [Setups]
+      summary: List MY setups with win/loss counts
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/SetupWithStats"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+    post:
+      tags: [Setups]
+      summary: Create a setup (max 2 per rolling 7 days)
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [image, description]
+              properties:
+                image:
+                  type: string
+                  format: binary
+                  description: 1:1 ratio image, ≤ N MB (TBD)
+                description:
+                  type: string
+                  maxLength: 500
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Setup"
+        "400":
+          description: Validation failed (bad ratio, file too large, etc.)
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "429":
+          description: Weekly upload limit (2) reached
+
+  /api/setups/{id}:
+    parameters:
+      - $ref: "#/components/parameters/SetupId"
+    get:
+      tags: [Setups]
+      summary: Single setup detail
+      security: []
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SetupWithStats"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    delete:
+      tags: [Setups]
+      summary: Soft-delete (owner only)
+      responses:
+        "204":
+          description: Deleted
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: Not the owner
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  # ── Saves ─────────────────────────────────────────────────────────
+  /api/setups/saved:
+    get:
+      tags: [Saves]
+      summary: List setups I've saved
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Setup"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /api/setups/{id}/save:
+    parameters:
+      - $ref: "#/components/parameters/SetupId"
+    post:
+      tags: [Saves]
+      summary: Save a setup (idempotent)
+      responses:
+        "204":
+          description: Saved (or already saved)
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    delete:
+      tags: [Saves]
+      summary: Unsave
+      responses:
+        "204":
+          description: Unsaved (or was not saved)
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  # ── Featured ──────────────────────────────────────────────────────
+  /api/setups/daily:
+    get:
+      tags: [Featured]
+      summary: Setup of the Day
+      description: Most wins in the past 24h, excluding posts featured in the last 7 days.
+      security: []
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SetupWithStats"
+        "404":
+          description: No eligible setup today
+
+  # ── Vote ──────────────────────────────────────────────────────────
+  /api/vote:
+    get:
+      tags: [Vote]
+      summary: Fetch a fresh pair of setups
+      security: []
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [left, right]
+                properties:
+                  left:
+                    $ref: "#/components/schemas/Setup"
+                  right:
+                    $ref: "#/components/schemas/Setup"
+        "404":
+          description: Not enough setups to form a pair
+    post:
+      tags: [Vote]
+      summary: Submit a vote or skip
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              oneOf:
+                - $ref: "#/components/schemas/VoteSubmit"
+                - $ref: "#/components/schemas/VoteSkip"
+      responses:
+        "204":
+          description: Recorded; client should call GET /api/vote for the next pair
+        "400":
+          description: Bad payload (e.g. winnerId == loserId)
+        "429":
+          description: Rate-limited (anti-abuse)
+
+  # ── Dashboard ─────────────────────────────────────────────────────
+  /api/dashboard:
+    get:
+      tags: [Dashboard]
+      summary: Top-N leaderboard
+      security: []
+      parameters:
+        - in: query
+          name: limit
+          schema: { type: integer, default: 20, minimum: 1, maximum: 100 }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [leaderboard]
+                properties:
+                  leaderboard:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/SetupWithStats"
+
+  # ── Users / Profile ───────────────────────────────────────────────
+  /api/users/{id}:
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema: { type: string, format: uuid }
+    get:
+      tags: [Users]
+      summary: Public profile
+      security: []
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PublicProfile"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+# ─────────────────────────────────────────────────────────────────────
+# Components
+# ─────────────────────────────────────────────────────────────────────
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT issued after Google OAuth (see /api/auth/login)
+
+  parameters:
+    SetupId:
+      in: path
+      name: id
+      required: true
+      schema:
+        type: string
+        format: uuid
+
+  responses:
+    Unauthorized:
+      description: Missing or invalid JWT
+    NotFound:
+      description: Resource not found
+
+  schemas:
+    Me:
+      type: object
+      required: [id, email, name]
+      properties:
+        id: { type: string, format: uuid }
+        email: { type: string, format: email }
+        name: { type: string }
+
+    Setup:
+      type: object
+      required: [id, createdBy, imageId, description, rating, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        createdBy: { type: string, format: uuid }
+        imageId: { type: string, description: Azure Blob Storage object key }
+        description: { type: string }
+        rating: { type: integer, description: Elo-style; default 800 }
+        createdAt: { type: string, format: date-time }
+
+    SetupWithStats:
+      allOf:
+        - $ref: "#/components/schemas/Setup"
+        - type: object
+          required: [wins, losses, creatorName]
+          properties:
+            wins: { type: integer }
+            losses: { type: integer }
+            creatorName: { type: string }
+
+    VoteSubmit:
+      type: object
+      required: [winnerId, loserId]
+      properties:
+        winnerId: { type: string, format: uuid }
+        loserId: { type: string, format: uuid }
+
+    VoteSkip:
+      type: object
+      required: [skipped, leftId, rightId]
+      properties:
+        skipped:
+          type: boolean
+          enum: [true]
+        leftId: { type: string, format: uuid }
+        rightId: { type: string, format: uuid }
+
+    PublicProfile:
+      type: object
+      required: [id, name, createdAt, posts]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        createdAt: { type: string, format: date-time }
+        posts:
+          type: array
+          items:
+            $ref: "#/components/schemas/SetupWithStats"
+
+# Default: every endpoint requires the JWT unless overridden by `security: []`
+security:
+  - bearerAuth: []
