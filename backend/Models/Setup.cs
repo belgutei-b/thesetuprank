@@ -6,7 +6,7 @@ public class Setup
     public required Guid CreatedBy { get; set; }
     public required string ImageUrl { get; set; }
     public required string Description { get; set; }
-    public required int Rating { get; set; } = 800;
+    public int Rating { get; set; } = 800;
     public bool IsActive { get; set; } = true;
     public DateTime? FeaturedAt { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;

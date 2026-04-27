@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using Azure.Storage.Blobs;
 using Azure.Storage.Sas;
 using backend.Data;
@@ -25,7 +26,39 @@ public static class SetupEndpoints
         // it was registered in Program.cs by builder.Services.AddDbContext
         app.MapPost("/api/setups", async (AppDbContext db, HttpContext ctx, SetupPostDto setupPostDto) =>
         {
-            return Results.Ok();
+            try
+            {
+                // check imageUrl
+                if (setupPostDto.ImageUrl.StartsWith(""))
+                {
+
+                }
+
+                var userId = (ctx.User.FindFirst(ClaimTypes.NameIdentifier)?.Value) ?? throw new Exception("null userId");
+
+                // todo: add length limit in imageUrl, Description
+                var newSetup = new backend.Models.Setup
+                {
+                    CreatedBy = new Guid(userId),
+                    ImageUrl = setupPostDto.ImageUrl,
+                    Description = setupPostDto.Description,
+                };
+
+                db.Setups.Add(newSetup);
+
+                await db.SaveChangesAsync();
+
+                return Results.Ok(new
+                {
+                    setupId = newSetup.Id,
+                    imageUrl = newSetup.ImageUrl,
+                    description = newSetup.Description,
+                });
+            }
+            catch (Exception ex)
+            {
+                return Results.Problem(ex.Message);
+            }
         });
 
         // no upload size limit
