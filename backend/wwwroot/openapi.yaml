@@ -324,18 +324,19 @@ components:
   schemas:
     User:
       type: object
-      required: [id, email, name, handle, image, createdAt]
+      required: [id, email, name, handle, imageUrl, createdAt, isActive]
       properties:
         id: { type: string, format: uuid }
         email: { type: string, format: email }
         name: { type: string }
         handle: { type: string }
-        image: { type: string }
+        imageUrl: { type: string }
         createdAt: { type: string, format: date-time }
+        isActive: { type: boolean, default: true }
 
     Setup:
       type: object
-      required: [id, createdBy, imageUrl, description, rating, createdAt]
+      required: [id, createdBy, imageUrl, description, rating, createdAt, isActive]
       properties:
         id: { type: string, format: uuid }
         createdBy: { type: string, format: uuid }
@@ -344,6 +345,7 @@ components:
         rating: { type: integer, description: Elo-style; default 800 }
         featuredAt: { type: string, format: date-time }
         createdAt: { type: string, format: date-time }
+        isActive: { type: boolean, default: true }
 
     SetupWithStats:
       allOf:
