@@ -85,18 +85,9 @@ paths:
       requestBody:
         required: true
         content:
-          multipart/form-data:
+          application/json:
             schema:
-              type: object
-              required: [image, description]
-              properties:
-                image:
-                  type: string
-                  format: binary
-                  description: 1:1 ratio image, ≤ N MB (TBD)
-                description:
-                  type: string
-                  maxLength: 500
+              $ref: "#/components/schemas/CreateSetupDto"
       responses:
         "201":
           description: Created
@@ -105,11 +96,25 @@ paths:
               schema:
                 $ref: "#/components/schemas/Setup"
         "400":
-          description: Validation failed (bad ratio, file too large, etc.)
+          description: Validation failed
         "401":
           $ref: "#/components/responses/Unauthorized"
         "429":
           description: Weekly upload limit (2) reached
+
+  /api/setups/upload-url:
+    post:
+      tags: [Setups]
+      summary: Get a short-lived SAS URL to upload an image directly to Azure Blob Storage
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UploadUrlDto"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
 
   /api/setups/{id}:
     parameters:
@@ -382,6 +387,30 @@ components:
       required: [battleId]
       properties:
         battleId: { type: string, format: uuid }
+
+    CreateSetupDto:
+      type: object
+      required: [description, imageUrl]
+      properties:
+        description:
+          type: string
+          maxLength: 500
+        imageUrl:
+          type: string
+          format: uri
+
+    UploadUrlDto:
+      type: object
+      required: [uploadUrl, imageUrl]
+      properties:
+        uploadUrl:
+          type: string
+          format: uri
+          description: Short-lived Azure SAS URL — PUT the image directly to this URL
+        imageUrl:
+          type: string
+          format: uri
+          description: Permanent public URL to store in the setup after upload
 
     PublicProfile:
       type: object

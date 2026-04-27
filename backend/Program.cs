@@ -2,6 +2,7 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
 using backend.Data;
+using backend.Endpoints;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.Google;
@@ -133,5 +134,7 @@ app.MapGet("/api/auth/me", (HttpContext ctx) =>
         id = ctx.User.FindFirst(ClaimTypes.NameIdentifier)?.Value,
     })
 );
+
+app.MapSetupEndpoints();
 
 app.Run();
