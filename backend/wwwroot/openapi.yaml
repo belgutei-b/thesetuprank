@@ -3,8 +3,7 @@ info:
   title: rate-setup API
   description: |
     Backend API for rate-setup — a head-to-head desk-setup voting site.
-    See `ROUTES.md` at the repo root for human-readable design notes.
-  version: 0.1.0
+  version: 0.1.1
 
 servers:
   - url: http://localhost:5065
@@ -52,7 +51,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/Me"
+                $ref: "#/components/schemas/User"
         "401":
           $ref: "#/components/responses/Unauthorized"
 
@@ -142,7 +141,7 @@ paths:
           $ref: "#/components/responses/NotFound"
 
   # ── Saves ─────────────────────────────────────────────────────────
-  /api/setups/saved:
+  /api/setups/saves:
     get:
       tags: [Saves]
       summary: List setups I've saved
@@ -158,7 +157,7 @@ paths:
         "401":
           $ref: "#/components/responses/Unauthorized"
 
-  /api/setups/{id}/save:
+  /api/setups/saves/{id}:
     parameters:
       - $ref: "#/components/parameters/SetupId"
     post:
@@ -209,18 +208,32 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                required: [left, right]
-                properties:
-                  left:
-                    $ref: "#/components/schemas/Setup"
-                  right:
-                    $ref: "#/components/schemas/Setup"
+                $ref: "#/components/schemas/Battle"
+                  
         "404":
           description: Not enough setups to form a pair
     post:
       tags: [Vote]
-      summary: Submit a vote or skip
+      summary: Submit a vote
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VoteSubmit"
+      responses:
+        "204":
+          description: Recorded; client should call GET /api/vote for the next pair
+        "400":
+          description: Bad payload (e.g. winnerId == loserId)
+        "429":
+          description: Rate-limited (anti-abuse)
+  
+  /api/vote/skip:
+    post:
+      tags: [Vote]
+      summary: Submit a skip
       security: []
       requestBody:
         required: true
@@ -228,13 +241,12 @@ paths:
           application/json:
             schema:
               oneOf:
-                - $ref: "#/components/schemas/VoteSubmit"
                 - $ref: "#/components/schemas/VoteSkip"
       responses:
         "204":
           description: Recorded; client should call GET /api/vote for the next pair
         "400":
-          description: Bad payload (e.g. winnerId == loserId)
+          description: Bad payload 
         "429":
           description: Rate-limited (anti-abuse)
 
@@ -310,23 +322,27 @@ components:
       description: Resource not found
 
   schemas:
-    Me:
+    User:
       type: object
-      required: [id, email, name]
+      required: [id, email, name, handle, image, createdAt]
       properties:
         id: { type: string, format: uuid }
         email: { type: string, format: email }
         name: { type: string }
+        handle: { type: string }
+        image: { type: string }
+        createdAt: { type: string, format: date-time }
 
     Setup:
       type: object
-      required: [id, createdBy, imageId, description, rating, createdAt]
+      required: [id, createdBy, imageUrl, description, rating, createdAt]
       properties:
         id: { type: string, format: uuid }
         createdBy: { type: string, format: uuid }
-        imageId: { type: string, description: Azure Blob Storage object key }
+        imageUrl: { type: string,  format: uri, description: Azure Blob Storage object key }
         description: { type: string }
         rating: { type: integer, description: Elo-style; default 800 }
+        featuredAt: { type: string, format: date-time }
         createdAt: { type: string, format: date-time }
 
     SetupWithStats:
@@ -339,22 +355,31 @@ components:
             losses: { type: integer }
             creatorName: { type: string }
 
+    Battle:
+      type: object
+      required: [battleId, setups]
+      properties:
+        battleId: { type: string, format: uuid }
+        setups:
+          type: array
+          minItems: 2
+          maxItems: 2
+          items:
+            $ref: "#/components/schemas/Setup"
+
     VoteSubmit:
       type: object
-      required: [winnerId, loserId]
+      required: [battleId, winnerId, loserId]
       properties:
+        battleId: { type: string, format: uuid }
         winnerId: { type: string, format: uuid }
         loserId: { type: string, format: uuid }
-
+      
     VoteSkip:
       type: object
-      required: [skipped, leftId, rightId]
+      required: [battleId]
       properties:
-        skipped:
-          type: boolean
-          enum: [true]
-        leftId: { type: string, format: uuid }
-        rightId: { type: string, format: uuid }
+        battleId: { type: string, format: uuid }
 
     PublicProfile:
       type: object

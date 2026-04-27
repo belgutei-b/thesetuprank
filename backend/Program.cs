@@ -108,6 +108,7 @@ app.MapGet("/api/auth/login", ctx =>
         new AuthenticationProperties { RedirectUri = "/" })
 ).AllowAnonymous();
 
+// http://localhost:5065/swagger/index.html
 app.MapGet("/openapi.yaml", async context =>
 {
     context.Response.ContentType = "application/yaml";
