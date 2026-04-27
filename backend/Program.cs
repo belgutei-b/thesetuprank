@@ -95,6 +95,16 @@ builder.Services.AddAuthorization(options =>
         .Build();
 });
 
+builder.Services.AddCors(options =>
+{
+    options.AddDefaultPolicy(policy =>
+    {
+        policy.WithOrigins("http://localhost:5173")
+              .AllowAnyHeader()
+              .AllowAnyMethod();
+    });
+});
+
 var app = builder.Build();
 
 using (var scope = app.Services.CreateScope())
@@ -109,6 +119,7 @@ app.UseSwaggerUI(c =>
     c.SwaggerEndpoint("/openapi.yaml", "Rate Setup API");
 });
 
+app.UseCors();
 app.UseAuthentication();
 app.UseAuthorization();
 
