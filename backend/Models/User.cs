@@ -9,5 +9,5 @@ public class User
     public required string Handle { get; set; }
     public required string ImageUrl { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
-    public bool isActive { get; set; } = true;
+    public required bool IsActive { get; set; } = true;
 }

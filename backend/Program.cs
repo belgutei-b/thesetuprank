@@ -38,6 +38,7 @@ builder.Services.AddAuthentication(o =>
         var claims = ctx.Principal?.Claims ?? [];
         var email = claims.FirstOrDefault(c => c.Type == ClaimTypes.Email)?.Value ?? "";
         var name = claims.FirstOrDefault(c => c.Type == ClaimTypes.Name)?.Value ?? "";
+        var imageUrl = claims.FirstOrDefault(c => c.Type == "picture")?.Value ?? "";
 
         // create user if first time signing in
         var db = ctx.HttpContext.RequestServices.GetRequiredService<AppDbContext>();
@@ -48,6 +49,9 @@ builder.Services.AddAuthentication(o =>
             {
                 Email = email,
                 Name = name,
+                IsActive = true,
+                ImageUrl = imageUrl,
+                Handle = name,
             };
             db.Users.Add(user);
             await db.SaveChangesAsync();
@@ -91,6 +95,12 @@ builder.Services.AddAuthorization(options =>
 });
 
 var app = builder.Build();
+
+using (var scope = app.Services.CreateScope())
+{
+    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    db.Database.Migrate();
+}
 
 // Swagger UI pointing to your YAML
 app.UseSwaggerUI(c =>
