@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { getMe, logout } from "~/api/auth";
 
 export function Welcome() {
   const [user, setUser] = useState<{
@@ -8,27 +9,25 @@ export function Welcome() {
   } | null>(null);
 
   useEffect(() => {
-    const hash = window.location.hash;
-    if (hash.startsWith("#token=")) {
-      const token = hash.slice("#token=".length);
-      localStorage.setItem("token", token);
-      window.history.replaceState(null, "", window.location.pathname);
+    async function tmpFunction() {
+      try {
+        const res = await getMe();
+        setUser(res);
+      } catch (err) {
+        console.log("Failed to authenticate user");
+      }
     }
-
-    const token = localStorage.getItem("token");
-    if (!token) return;
-
-    fetch("/api/auth/me", {
-      headers: { Authorization: `Bearer ${token}` },
-    })
-      .then((r) => (r.ok ? r.json() : null))
-      .then((data) => setUser(data))
-      .catch(() => {});
+    tmpFunction();
   }, []);
 
-  function logout() {
-    localStorage.removeItem("token");
-    setUser(null);
+  async function handleLogout() {
+    // todo call logout library function
+    try {
+      await logout();
+      setUser(null);
+    } catch (err) {
+      console.log("Failed to logout");
+    }
   }
 
   return (
@@ -43,7 +42,7 @@ export function Welcome() {
               {user.id})
             </p>
             <button
-              onClick={logout}
+              onClick={handleLogout}
               className="px-4 py-2 rounded bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600"
             >
               Sign out

@@ -1,0 +1,47 @@
+using System;
+using System.Security.Claims;
+using backend.Data;
+
+namespace backend.Endpoints;
+
+public static class AuthEndpoints
+{
+
+    public static void MapAuthEndpoints(this WebApplication app)
+    {
+        app.MapGet("/api/auth/me", async (AppDbContext db, HttpContext ctx, ILogger<Program> logger) =>
+        {
+            try
+            {
+                logger.LogInformation("received auth request");
+                var name = ctx.User.FindFirst(ClaimTypes.Name)?.Value;
+                var email = ctx.User.FindFirst(ClaimTypes.Email)?.Value;
+                var id = ctx.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+                return Results.Ok(new
+                {
+                    id,
+                    name,
+                    email,
+                });
+            }
+            catch (Exception ex)
+            {
+                return Results.Problem(ex.Message);
+            }
+        });
+
+        app.MapPost("/api/auth/logout", (HttpContext ctx) =>
+        {
+            try
+            {
+                ctx.Response.Cookies.Delete("auth_token");
+                return Results.Ok();
+            }
+            catch (Exception ex)
+            {
+                return Results.Problem(ex.Message);
+            }
+        });
+    }
+}

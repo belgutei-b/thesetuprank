@@ -6,6 +6,7 @@ using backend.Endpoints;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.Google;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -67,12 +68,28 @@ builder.Services.AddAuthentication(o =>
             signingCredentials: new SigningCredentials(signingKey, SecurityAlgorithms.HmacSha256)
         ));
 
-        ctx.Response.Redirect($"http://localhost:5173/#token={jwt}");
+        ctx.Response.Cookies.Append("auth_token", jwt, new CookieOptions
+        {
+            HttpOnly = true, // client side js can't access it
+            SameSite = SameSiteMode.Lax,
+            Secure = false, // over https only / set to true in production
+            Expires = DateTimeOffset.UtcNow.AddDays(7),
+        });
+
+        ctx.Response.Redirect($"http://localhost:5173/");
         ctx.HandleResponse();
     };
 })
 .AddJwtBearer(o =>
 {
+    o.Events = new JwtBearerEvents
+    {
+        OnMessageReceived = ctx =>
+        {
+            ctx.Token = ctx.Request.Cookies["auth_token"];
+            return Task.CompletedTask;
+        }
+    };
     // handles every subsequent API request after google login
     o.TokenValidationParameters = new TokenValidationParameters
     {
@@ -101,7 +118,8 @@ builder.Services.AddCors(options =>
     {
         policy.WithOrigins("http://localhost:5173")
               .AllowAnyHeader()
-              .AllowAnyMethod();
+              .AllowAnyMethod()
+              .AllowCredentials();
     });
 });
 
@@ -137,15 +155,7 @@ app.MapGet("/openapi.yaml", async context =>
     await context.Response.SendFileAsync("wwwroot/openapi.yaml");
 }).AllowAnonymous();
 
-app.MapGet("/api/auth/me", (HttpContext ctx) =>
-    Results.Ok(new
-    {
-        name = ctx.User.FindFirst(ClaimTypes.Name)?.Value,
-        email = ctx.User.FindFirst(ClaimTypes.Email)?.Value,
-        id = ctx.User.FindFirst(ClaimTypes.NameIdentifier)?.Value,
-    })
-);
-
 app.MapSetupEndpoints();
+app.MapAuthEndpoints();
 
 app.Run();
