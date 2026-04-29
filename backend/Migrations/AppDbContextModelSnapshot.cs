@@ -123,35 +123,6 @@ namespace backend.Migrations
                     b.ToTable("Users");
                 });
 
-            modelBuilder.Entity("backend.Models.Vote", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<Guid>("BattleId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<Guid>("LoserId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<Guid>("WinnerId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("BattleId");
-
-                    b.HasIndex("LoserId");
-
-                    b.HasIndex("WinnerId");
-
-                    b.ToTable("Votes");
-                });
-
             modelBuilder.Entity("backend.Models.Battle", b =>
                 {
                     b.HasOne("backend.Models.Setup", "Setup1")
@@ -169,33 +140,6 @@ namespace backend.Migrations
                     b.Navigation("Setup1");
 
                     b.Navigation("Setup2");
-                });
-
-            modelBuilder.Entity("backend.Models.Vote", b =>
-                {
-                    b.HasOne("backend.Models.Battle", "Battle")
-                        .WithMany()
-                        .HasForeignKey("BattleId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("backend.Models.Setup", "Loser")
-                        .WithMany()
-                        .HasForeignKey("LoserId")
-                        .OnDelete(DeleteBehavior.NoAction)
-                        .IsRequired();
-
-                    b.HasOne("backend.Models.Setup", "Winner")
-                        .WithMany()
-                        .HasForeignKey("WinnerId")
-                        .OnDelete(DeleteBehavior.NoAction)
-                        .IsRequired();
-
-                    b.Navigation("Battle");
-
-                    b.Navigation("Loser");
-
-                    b.Navigation("Winner");
                 });
 #pragma warning restore 612, 618
         }

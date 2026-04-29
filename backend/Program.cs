@@ -157,5 +157,6 @@ app.MapGet("/openapi.yaml", async context =>
 
 app.MapSetupEndpoints();
 app.MapAuthEndpoints();
+app.MapVoteEndpoints();
 
 app.Run();

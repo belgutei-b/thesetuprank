@@ -12,7 +12,6 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<User> Users { get; set; }
     public DbSet<Setup> Setups { get; set; }
     public DbSet<Battle> Battles { get; set; }
-    public DbSet<Vote> Votes { get; set; }
 
     // runs once when app starts up
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -33,17 +32,5 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             .HasForeignKey(b => b.Setup2Id)
             .OnDelete(DeleteBehavior.NoAction);
 
-        modelBuilder.Entity<Vote>()
-            .HasQueryFilter(v => v.Winner.IsActive && v.Loser.IsActive)
-            .HasOne(v => v.Winner)
-            .WithMany()
-            .HasForeignKey(v => v.WinnerId)
-            .OnDelete(DeleteBehavior.NoAction);
-
-        modelBuilder.Entity<Vote>()
-            .HasOne(v => v.Loser)
-            .WithMany()
-            .HasForeignKey(v => v.LoserId)
-            .OnDelete(DeleteBehavior.NoAction);
     }
 }

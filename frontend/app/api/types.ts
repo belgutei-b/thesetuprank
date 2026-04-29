@@ -26,3 +26,17 @@ export type Setup = Omit<ApiSetup, "createdAt" | "featuredAt"> & {
   createdAt: Date;
   featuredAt?: Date;
 };
+
+export type ApiSetupBrief = Omit<ApiSetup, "createdAt" | "featuredAt">;
+
+export type ApiVoteGet = {
+  battleId: string;
+  setupA: ApiSetupBrief;
+  setupB: ApiSetupBrief;
+};
+
+export type ApiVoteResponse = {
+  battleId: string;
+  winnerDiff: number;
+  loserDiff: number;
+};
