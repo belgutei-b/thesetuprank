@@ -8,6 +8,9 @@ namespace backend.Endpoints;
 
 public static class SetupEndpoints
 {
+    private const int MaxNameLength = 40;
+    private const int MaxDescriptionLength = 400;
+
     public static void MapSetupEndpoints(this WebApplication app)
     {
         app.MapGet("/api/setups", async (AppDbContext db, HttpContext ctx) =>
@@ -24,23 +27,35 @@ public static class SetupEndpoints
 
         // db is accessible in the api endpoints because (dependency injection)
         // it was registered in Program.cs by builder.Services.AddDbContext
-        app.MapPost("/api/setups", async (AppDbContext db, HttpContext ctx, SetupPostDto setupPostDto) =>
+        app.MapPost("/api/setups", async (AppDbContext db, HttpContext ctx, SetupPostDto setupPostDto, ILogger<Program> logger) =>
         {
             try
             {
                 // check imageUrl
-                if (setupPostDto.ImageUrl.StartsWith(""))
+                if (!setupPostDto.ImageUrl.StartsWith("https://setupimages.blob.core.windows.net/setupcontainer/"))
                 {
+                    throw new Exception("Invalid image url");
+                }
 
+                // check length of the name (40 chars) & description(400 chars)
+
+                if (setupPostDto.Name.Length > MaxNameLength)
+                {
+                    throw new Exception("Length of name exceeds 40 chars");
+                }
+
+                if (setupPostDto.Description.Length > MaxDescriptionLength)
+                {
+                    throw new Exception("Length of description exceeds 400 chars");
                 }
 
                 var userId = (ctx.User.FindFirst(ClaimTypes.NameIdentifier)?.Value) ?? throw new Exception("null userId");
 
-                // todo: add length limit in imageUrl, Description
                 var newSetup = new backend.Models.Setup
                 {
                     CreatedBy = new Guid(userId),
                     ImageUrl = setupPostDto.ImageUrl,
+                    Name = setupPostDto.Name,
                     Description = setupPostDto.Description,
                 };
 
@@ -57,10 +72,12 @@ public static class SetupEndpoints
             }
             catch (Exception ex)
             {
-                return Results.Problem(ex.Message);
+                logger.LogError(ex, "POST /api/setups/ FAILED");
+                return Results.Problem("An unexpected error occurred.");
             }
         });
 
+        // TODO: 2 setup per user limit is not enforced
         // no upload size limit
         // doesn't remove the url if nothing is uploaded in 15 minutes
         app.MapPost("/api/setups/upload-url", (IConfiguration config, ILogger<Program> logger) =>
@@ -70,8 +87,6 @@ public static class SetupEndpoints
             // imageUrl: permanent public URL of the image after it is uploaded
             try
             {
-                logger.LogInformation("Generating upload URL");
-
                 var connectionString = config["Azure:BlobConnectionString"];
                 var containerName = config["Azure:ContainerName"];
 
@@ -95,8 +110,8 @@ public static class SetupEndpoints
             }
             catch (Exception ex)
             {
-                logger.LogInformation("failed");
-                return Results.Problem(ex.Message);
+                logger.LogError(ex, "POST /api/setups/upload-url FAILED");
+                return Results.Problem("An unexpected error occurred.");
             }
         })
         .Produces<SetupUploadImageDto>(200)

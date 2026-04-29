@@ -2,10 +2,12 @@ import { useRef, useState } from "react";
 import { useNavigate } from "react-router";
 import { useAuth } from "~/context/AuthContext";
 import { createSetup, getUploadUrl, uploadImageToAzure } from "~/api/setup";
+import toast from "react-hot-toast";
 
 type Status = "idle" | "uploading" | "success" | "error";
 
-const MAX_NAME_LENGTH = 20;
+const MAX_NAME_LENGTH = 40;
+const MAX_DESCRIPTION_LENGTH = 400;
 const MAX_FILE_SIZE_MB = 10;
 
 export default function Submit() {
@@ -24,21 +26,19 @@ export default function Submit() {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [status, setStatus] = useState<Status>("idle");
-  const [errorMessage, setErrorMessage] = useState("");
   const [isDragging, setIsDragging] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   function handleFileSelect(file: File) {
     if (!file.type.startsWith("image/")) {
-      setErrorMessage("Only image files are allowed.");
+      toast.error("Only image files are allowed.");
       return;
     }
     if (file.size > MAX_FILE_SIZE_MB * 1024 * 1024) {
-      setErrorMessage(`File must be under ${MAX_FILE_SIZE_MB}MB.`);
+      toast.error(`File must be under ${MAX_FILE_SIZE_MB}MB.`);
       return;
     }
-    setErrorMessage("");
     setImageFile(file);
     setImagePreview(URL.createObjectURL(file));
   }
@@ -53,26 +53,30 @@ export default function Submit() {
   async function handleSubmit(e: { preventDefault: () => void }) {
     e.preventDefault();
     if (!imageFile) {
-      setErrorMessage("Please select a photo.");
+      toast.error("Please select a photo.");
       return;
     }
     if (!name.trim()) {
-      setErrorMessage("Please enter a setup name.");
+      toast.error("Please enter a setup name.");
       return;
     }
 
     setStatus("uploading");
-    setErrorMessage("");
 
     try {
       const { uploadUrl, imageUrl } = await getUploadUrl();
       await uploadImageToAzure(uploadUrl, imageFile);
-      await createSetup(imageUrl, description);
+      await createSetup({
+        name,
+        description,
+        imageUrl,
+      });
       setStatus("success");
+      toast.success("Successfully added");
       navigate("/profile");
     } catch (err) {
       setStatus("error");
-      setErrorMessage("Something went wrong. Please try again.");
+      toast.error("Something went wrong. Please try again.");
     }
   }
 
@@ -172,26 +176,34 @@ export default function Submit() {
 
       {/* Description */}
       <div className="flex flex-col gap-1">
-        <label
-          className="text-xs uppercase tracking-widest"
-          style={{ color: "var(--color-muted)" }}
-        >
-          Short Description
-        </label>
+        <div className="flex justify-between">
+          <label
+            className="text-xs uppercase tracking-widest"
+            style={{ color: "var(--color-muted)" }}
+          >
+            Short Description
+          </label>
+          <span
+            className="text-xs"
+            style={{
+              color:
+                description.length >= MAX_DESCRIPTION_LENGTH
+                  ? "var(--color-accent)"
+                  : "var(--color-muted)",
+            }}
+          >
+            {description.length}/{MAX_DESCRIPTION_LENGTH}
+          </span>
+        </div>
         <textarea
           value={description}
+          maxLength={MAX_DESCRIPTION_LENGTH}
           onChange={(e) => setDescription(e.target.value)}
           rows={3}
           className="w-full bg-transparent border px-3 py-2 text-sm outline-none resize-none focus:border-[var(--color-accent)] transition-colors"
           style={{ borderColor: "#333", color: "var(--color-text)" }}
         />
       </div>
-
-      {errorMessage && (
-        <p className="text-xs" style={{ color: "#e57373" }}>
-          {errorMessage}
-        </p>
-      )}
 
       <button
         type="submit"

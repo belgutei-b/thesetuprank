@@ -29,7 +29,7 @@ export function UtilityBar() {
               My Profile
             </Link>
             <Link
-              to="/add"
+              to="/submit"
               className="hover:text-[var(--color-text)] transition-colors"
             >
               + Add Setup
