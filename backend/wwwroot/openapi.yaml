@@ -16,16 +16,18 @@ tags:
     description: Google OAuth + current-user lookup
   - name: Setups
     description: A user's own setup posts (CRUD)
+  - name: Vote
+    description: Head-to-head pair fetch + submit
   - name: Saves
     description: Saving / unsaving other users' setups
   - name: Featured
     description: Setup of the Day
-  - name: Vote
-    description: Head-to-head pair fetch + submit
+  - name: Week
+    description: Current voting week boundaries
+  - name: Report
+    description: Reporting inappropriate setups
   - name: Dashboard
     description: Public leaderboard
-  - name: Users
-    description: Public profile pages
 
 # ─────────────────────────────────────────────────────────────────────
 # Paths
@@ -35,7 +37,7 @@ paths:
   /api/auth/login:
     get:
       tags: [Auth]
-      summary: Start Google OAuth flow
+      summary: "[done] Start Google OAuth flow"
       security: []
       responses:
         "302":
@@ -44,7 +46,7 @@ paths:
   /api/auth/me:
     get:
       tags: [Auth]
-      summary: Current user from JWT
+      summary: "[done] Current user from JWT"
       responses:
         "200":
           description: OK
@@ -58,7 +60,7 @@ paths:
   /api/auth/logout:
     post:
       tags: [Auth]
-      summary: Clear cookie / signal client to drop JWT
+      summary: "[done] Clear cookie / signal client to drop JWT"
       responses:
         "204":
           description: Logged out
@@ -67,7 +69,7 @@ paths:
   /api/setups:
     get:
       tags: [Setups]
-      summary: List MY setups with win/loss counts
+      summary: "[todo] List MY setups with win/loss counts"
       responses:
         "200":
           description: OK
@@ -81,7 +83,7 @@ paths:
           $ref: "#/components/responses/Unauthorized"
     post:
       tags: [Setups]
-      summary: Create a setup (max 2 per rolling 7 days)
+      summary: "[done] Create a setup (max 2 per rolling 7 days)"
       requestBody:
         required: true
         content:
@@ -105,7 +107,7 @@ paths:
   /api/setups/upload-url:
     post:
       tags: [Setups]
-      summary: Get a short-lived SAS URL to upload an image directly to Azure Blob Storage
+      summary: "[done] Get a short-lived SAS URL to upload an image directly to Azure Blob Storage"
       responses:
         "200":
           description: OK
@@ -121,7 +123,7 @@ paths:
       - $ref: "#/components/parameters/SetupId"
     get:
       tags: [Setups]
-      summary: Single setup detail
+      summary: "[todo] Single setup detail"
       security: []
       responses:
         "200":
@@ -132,9 +134,31 @@ paths:
                 $ref: "#/components/schemas/SetupWithStats"
         "404":
           $ref: "#/components/responses/NotFound"
+    put:
+      tags: [Setups]
+      summary: "[todo] Edit setup description (owner only)"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EditSetupDto"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Setup"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: Not the owner
+        "404":
+          $ref: "#/components/responses/NotFound"
     delete:
       tags: [Setups]
-      summary: Soft-delete (owner only)
+      summary: "[todo] Soft-delete (owner only)"
       responses:
         "204":
           description: Deleted
@@ -145,11 +169,62 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
 
+  # ── Vote ──────────────────────────────────────────────────────────
+  /api/vote:
+    get:
+      tags: [Vote]
+      summary: "[done] Fetch a fresh pair of setups"
+      security: []
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Battle"
+                  
+        "404":
+          description: Not enough setups to form a pair
+    post:
+      tags: [Vote]
+      summary: "[done] Submit a vote"
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VoteSubmit"
+      responses:
+        "200":
+          description: Recorded; returns rating changes
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VoteSubmitResult"
+        "400":
+          description: Bad payload (e.g. winnerId == loserId)
+        "429":
+          description: Rate-limited (anti-abuse)
+
+  /api/vote/count:
+    get:
+      tags: [Vote]
+      summary: "[todo] Number of votes cast in the past 24 hours"
+      security: []
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VoteCount"
+
   # ── Saves ─────────────────────────────────────────────────────────
   /api/setups/saves:
     get:
       tags: [Saves]
-      summary: List setups I've saved
+      summary: "[todo] List setups I've saved"
       responses:
         "200":
           description: OK
@@ -167,7 +242,7 @@ paths:
       - $ref: "#/components/parameters/SetupId"
     post:
       tags: [Saves]
-      summary: Save a setup (idempotent)
+      summary: "[todo] Save a setup (idempotent)"
       responses:
         "204":
           description: Saved (or already saved)
@@ -177,19 +252,33 @@ paths:
           $ref: "#/components/responses/NotFound"
     delete:
       tags: [Saves]
-      summary: Unsave
+      summary: "[todo] Unsave"
       responses:
         "204":
           description: Unsaved (or was not saved)
         "401":
           $ref: "#/components/responses/Unauthorized"
 
+  # ── Report ────────────────────────────────────────────────────────
+  /api/report/{id}:
+    parameters:
+      - $ref: "#/components/parameters/SetupId"
+    post:
+      tags: [Report]
+      summary: "[todo] Report a setup"
+      security: []
+      responses:
+        "204":
+          description: Report recorded
+        "404":
+          $ref: "#/components/responses/NotFound"
+
   # ── Featured ──────────────────────────────────────────────────────
   /api/setups/daily:
     get:
       tags: [Featured]
-      summary: Setup of the Day
-      description: Most wins in the past 24h, excluding posts featured in the last 7 days.
+      summary: "[todo] Last 10 daily setups"
+      description: Returns the 10 most recent daily winners, ordered from most recent to oldest.
       security: []
       responses:
         "200":
@@ -197,15 +286,17 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/SetupWithStats"
-        "404":
-          description: No eligible setup today
+                type: array
+                maxItems: 10
+                items:
+                  $ref: "#/components/schemas/DailySetup"
 
-  # ── Vote ──────────────────────────────────────────────────────────
-  /api/vote:
+  # ── Week ──────────────────────────────────────────────────────────
+  /api/week:
     get:
-      tags: [Vote]
-      summary: Fetch a fresh pair of setups
+      tags: [Week]
+      summary: "[todo] Current week boundaries (Monday–Sunday UTC)"
+      description: Returns when the current voting week started and when it ends. Week resets every Monday at 00:00 UTC.
       security: []
       responses:
         "200":
@@ -213,53 +304,14 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/Battle"
-                  
-        "404":
-          description: Not enough setups to form a pair
-    post:
-      tags: [Vote]
-      summary: Submit a vote
-      security: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/VoteSubmit"
-      responses:
-        "204":
-          description: Recorded; client should call GET /api/vote for the next pair
-        "400":
-          description: Bad payload (e.g. winnerId == loserId)
-        "429":
-          description: Rate-limited (anti-abuse)
-  
-  /api/vote/skip:
-    post:
-      tags: [Vote]
-      summary: Submit a skip
-      security: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              oneOf:
-                - $ref: "#/components/schemas/VoteSkip"
-      responses:
-        "204":
-          description: Recorded; client should call GET /api/vote for the next pair
-        "400":
-          description: Bad payload 
-        "429":
-          description: Rate-limited (anti-abuse)
+                $ref: "#/components/schemas/WeekInfo"
 
   # ── Dashboard ─────────────────────────────────────────────────────
   /api/dashboard:
     get:
       tags: [Dashboard]
-      summary: Top-N leaderboard
+      summary: "[todo] Current week's top-N leaderboard"
+      description: Returns the top N setups by win count within the current voting week (Monday–Sunday UTC).
       security: []
       parameters:
         - in: query
@@ -279,26 +331,6 @@ paths:
                     items:
                       $ref: "#/components/schemas/SetupWithStats"
 
-  # ── Users / Profile ───────────────────────────────────────────────
-  /api/users/{id}:
-    parameters:
-      - in: path
-        name: id
-        required: true
-        schema: { type: string, format: uuid }
-    get:
-      tags: [Users]
-      summary: Public profile
-      security: []
-      responses:
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PublicProfile"
-        "404":
-          $ref: "#/components/responses/NotFound"
 
 # ─────────────────────────────────────────────────────────────────────
 # Components
@@ -362,6 +394,17 @@ components:
             losses: { type: integer }
             creatorName: { type: string }
 
+    DailySetup:
+      allOf:
+        - $ref: "#/components/schemas/SetupWithStats"
+        - type: object
+          required: [featuredAt]
+          properties:
+            featuredAt:
+              type: string
+              format: date-time
+              description: The UTC timestamp when this setup was named daily winner
+
     Battle:
       type: object
       required: [battleId, setups]
@@ -381,12 +424,43 @@ components:
         battleId: { type: string, format: uuid }
         winnerId: { type: string, format: uuid }
         loserId: { type: string, format: uuid }
-      
-    VoteSkip:
+
+    VoteSubmitResult:
       type: object
-      required: [battleId]
+      required: [battleId, winnerDiff, loserDiff]
       properties:
         battleId: { type: string, format: uuid }
+        winnerDiff: { type: integer, description: Rating points gained by the winner }
+        loserDiff: { type: integer, description: Rating points lost by the loser (negative) }
+
+    VoteCount:
+      type: object
+      required: [count]
+      properties:
+        count: { type: integer, description: Total votes cast in the past 24 hours }
+
+    WeekInfo:
+      type: object
+      required: [weekStartsAt, weekEndsAt]
+      properties:
+        weekStartsAt:
+          type: string
+          format: date-time
+          description: Monday 00:00 UTC of the current week
+        weekEndsAt:
+          type: string
+          format: date-time
+          description: Next Monday 00:00 UTC (exclusive end of the current week)
+
+    EditSetupDto:
+      type: object
+      properties:
+        name:
+          type: string
+          maxLength: 100
+        description:
+          type: string
+          maxLength: 500
 
     CreateSetupDto:
       type: object
@@ -412,17 +486,6 @@ components:
           format: uri
           description: Permanent public URL to store in the setup after upload
 
-    PublicProfile:
-      type: object
-      required: [id, name, createdAt, posts]
-      properties:
-        id: { type: string, format: uuid }
-        name: { type: string }
-        createdAt: { type: string, format: date-time }
-        posts:
-          type: array
-          items:
-            $ref: "#/components/schemas/SetupWithStats"
 
 # Default: every endpoint requires the JWT unless overridden by `security: []`
 security:

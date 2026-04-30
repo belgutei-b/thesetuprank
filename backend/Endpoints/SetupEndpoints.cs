@@ -27,6 +27,7 @@ public static class SetupEndpoints
 
         // db is accessible in the api endpoints because (dependency injection)
         // it was registered in Program.cs by builder.Services.AddDbContext
+        // TODO: enforce 2 setups per week
         app.MapPost("/api/setups", async (AppDbContext db, HttpContext ctx, SetupPostDto setupPostDto, ILogger<Program> logger) =>
         {
             try

@@ -10,6 +10,7 @@ public static class VoteEndpoints
 {
     public static void MapVoteEndpoints(this WebApplication app)
     {
+        // TODO: 2 setups has to be uploaded this week
         app.MapGet("/api/vote", async (AppDbContext db, HttpContext ctx, ILogger<Program> logger) =>
         {
             try
@@ -137,6 +138,20 @@ public static class VoteEndpoints
                 logger.LogError(ex, "POST /api/vote Failed");
                 return Results.Problem("An unexpected error occurred.");
             }
+        }).AllowAnonymous();
+
+        // number of votes in the last 24 hours
+        // TODO: show the number of votes since the beginning of the week
+        app.MapGet("/api/vote/count", async (AppDbContext db, ILogger<Program> logger) =>
+        {
+            DateTime now = DateTime.Now;
+            DateTime timeCutoff = now.AddDays(-1);
+
+            var count = await db.Battles
+                .Where(u => u.SubmittedAt.HasValue && u.SubmittedAt >= timeCutoff)
+                .CountAsync();
+
+            return Results.Ok(new { count });
         }).AllowAnonymous();
     }
 }

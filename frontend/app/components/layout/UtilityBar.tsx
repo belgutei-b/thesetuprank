@@ -10,7 +10,7 @@ function getWeekOf() {
 }
 
 export function UtilityBar() {
-  const { user, handleLogout } = useAuth();
+  const { user, handleLogout, voteCount } = useAuth();
 
   return (
     <div
@@ -20,6 +20,9 @@ export function UtilityBar() {
       <span>EST. 2026 &nbsp;·&nbsp; WEEK OF {getWeekOf()}</span>
 
       <div className="flex items-center gap-4">
+        {voteCount !== null && (
+          <span>{voteCount} votes</span>
+        )}
         {user ? (
           <>
             <Link

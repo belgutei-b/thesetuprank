@@ -1,7 +1,13 @@
 import type { ApiVoteGet, ApiVoteResponse } from "~/api/types";
 
+export async function getVoteCount(): Promise<number> {
+  const res = await fetch("/api/vote/count", { credentials: "include" });
+  if (!res.ok) throw new Error("Failed to fetch vote count");
+  const data = await res.json();
+  return data.count;
+}
+
 export async function getVote(): Promise<ApiVoteGet> {
-  console.log("getting vote");
   const res = await fetch("/api/vote", {
     method: "GET",
     credentials: "include",

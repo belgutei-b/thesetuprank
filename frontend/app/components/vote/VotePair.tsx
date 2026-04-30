@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import type { ApiVoteGet, ApiVoteResponse } from "~/api/types";
 import { postVote } from "~/api/vote";
+import { useAuth } from "~/context/AuthContext";
 import SetupCard from "./SetupCard";
 
 type VoteState = "idle" | "voted";
@@ -12,6 +13,7 @@ type Props = {
 };
 
 export default function VotePair({ battle, onNext }: Props) {
+  const { incrementVoteCount } = useAuth();
   const [voteState, setVoteState] = useState<VoteState>("idle");
   const [winner, setWinner] = useState<Winner>(null);
   const [voteResponse, setVoteResponse] = useState<ApiVoteResponse | null>(null);
@@ -35,6 +37,7 @@ export default function VotePair({ battle, onNext }: Props) {
     try {
       const res = await postVote(battle.battleId, winnerSetup.id, loserSetup.id);
       setVoteResponse(res);
+      incrementVoteCount();
       setTimeout(onNext, 1500);
     } catch {
       // Still advance even if the request failed
