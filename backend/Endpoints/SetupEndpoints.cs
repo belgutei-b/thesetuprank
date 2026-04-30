@@ -3,6 +3,7 @@ using Azure.Storage.Blobs;
 using Azure.Storage.Sas;
 using backend.Data;
 using backend.Dtos;
+using Microsoft.EntityFrameworkCore;
 
 namespace backend.Endpoints;
 
@@ -13,10 +14,60 @@ public static class SetupEndpoints
 
     public static void MapSetupEndpoints(this WebApplication app)
     {
-        app.MapGet("/api/setups", async (AppDbContext db, HttpContext ctx) =>
+        // authenticated user's setups
+        app.MapGet("/api/setups", async (AppDbContext db, HttpContext ctx, ILogger<Program> logger) =>
         {
-            return Results.Ok();
-        });
+            try
+            {
+                var userId = (ctx.User.FindFirst(ClaimTypes.NameIdentifier)?.Value) ?? throw new Exception("null userId");
+                var user = new Guid(userId);
+
+                var setups = await db.Setups
+                    .Where(s => s.IsActive)
+                    .Where(u => u.CreatedBy.Equals(user))
+                    .ToListAsync();
+
+                var setupIds = setups.Select(s => s.Id).ToList();
+
+                var setupRet = new List<SetupListResDto>();
+                for (var i = 0; i < setups.Count; i++)
+                {
+                    setupRet.Add(new SetupListResDto
+                    {
+                        Id = setups[i].Id,
+                        ImageUrl = setups[i].ImageUrl,
+                        Name = setups[i].Name,
+                        Description = setups[i].Description,
+                        Rating = setups[i].Rating,
+                        FeaturedAt = setups[i].FeaturedAt,
+                        CreatedAt = setups[i].CreatedAt,
+                        Wins = 0,
+                        Losses = 0,
+                    });
+                }
+
+                var battles = await db.Battles
+                    .Where(b => b.SubmittedAt.HasValue)
+                    .Where(b => setupIds.Contains(b.Setup1Id) || setupIds.Contains(b.Setup2Id))
+                    .ToListAsync();
+
+                for (int i = 0; i < setupRet.Count; i++)
+                {
+                    int winCount = battles.FindAll(battle => battle.WinnerId == setupRet[i].Id).Count;
+                    setupRet[i].Wins = winCount;
+
+                    int lossCount = battles.FindAll(battle => battle.LoserId == setupRet[i].Id).Count;
+                    setupRet[i].Losses = lossCount;
+                }
+                return Results.Ok(setupRet);
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "POST /api/setups/ FAILED");
+                return Results.Problem("An unexpected error occurred.");
+            }
+        })
+        .Produces<List<SetupListResDto>>(200);
 
         // setup upload flow
         // 1. frontend calls POST /api/setups/upload-url

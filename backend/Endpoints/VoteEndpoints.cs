@@ -87,6 +87,8 @@ public static class VoteEndpoints
                     .FirstOrDefaultAsync(b => b.Id == battleId)
                     ?? throw new Exception("Battle not found");
 
+                // todo: ensure that currently submittedAt is null (not duplicated request)
+                // todo: validate the ids first
                 var winner = (winnerId == battle.Setup1Id) ? battle.Setup1 : battle.Setup2;
                 var loser = (loserId == battle.Setup1Id) ? battle.Setup1 : battle.Setup2;
 
@@ -111,6 +113,8 @@ public static class VoteEndpoints
                 loser.Rating = (int)Math.Round(loserNewRating);
 
                 battle.SubmittedAt = DateTime.UtcNow;
+                battle.WinnerId = winner.Id;
+                battle.LoserId = loser.Id;
                 await db.SaveChangesAsync();
 
                 // return rank change

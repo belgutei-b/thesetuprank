@@ -1,3 +1,5 @@
+import type { ApiSetupListItem } from "./types";
+
 export async function getUploadUrl(): Promise<{
   uploadUrl: string;
   imageUrl: string;
@@ -36,5 +38,10 @@ export async function createSetup(setup: {
   if (!res.ok) throw new Error("Failed to create setup");
 }
 
-export function getSetups() {}
+export async function getSetups(): Promise<ApiSetupListItem[]> {
+  const res = await fetch("/api/setups", { credentials: "include" });
+  if (!res.ok) throw new Error("Failed to fetch setups");
+  return res.json();
+}
+
 export function deleteSetup() {}

@@ -6,7 +6,7 @@ import VotePair from "~/components/vote/VotePair";
 
 export function meta({}: Route.MetaArgs) {
   return [
-    { title: "Setup Rank" },
+    { title: "SetupRank" },
     { name: "description", content: "Welcome to Setup Rank!" },
   ];
 }

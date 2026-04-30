@@ -31,6 +31,9 @@ namespace backend.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
+                    b.Property<Guid?>("LoserId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<Guid>("Setup1Id")
                         .HasColumnType("uniqueidentifier");
 
@@ -41,6 +44,9 @@ namespace backend.Migrations
                         .HasColumnType("datetime2");
 
                     b.Property<Guid?>("VoterId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("WinnerId")
                         .HasColumnType("uniqueidentifier");
 
                     b.HasKey("Id");

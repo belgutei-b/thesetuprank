@@ -29,6 +29,18 @@ export type Setup = Omit<ApiSetup, "createdAt" | "featuredAt"> & {
 
 export type ApiSetupBrief = Omit<ApiSetup, "createdAt" | "featuredAt">;
 
+export type ApiSetupListItem = {
+  id: string;
+  imageUrl: string;
+  name: string;
+  description: string;
+  rating: number;
+  wins: number;
+  losses: number;
+  createdAt: string;
+  featuredAt?: string;
+};
+
 export type ApiVoteGet = {
   battleId: string;
   setupA: ApiSetupBrief;
