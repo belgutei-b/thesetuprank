@@ -1,8 +1,8 @@
 using System;
 
-namespace backend.Dtos;
+namespace backend.Dtos.Vote;
 
-public class VoteGetDto
+public class VoteGetResDto
 {
     public required Guid BattleId { get; set; }
     public required SetupBriefDto SetupA { get; set; }

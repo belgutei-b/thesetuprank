@@ -22,8 +22,6 @@ tags:
     description: Saving / unsaving other users' setups
   - name: Featured
     description: Setup of the Day
-  - name: Week
-    description: Current voting week boundaries
   - name: Report
     description: Reporting inappropriate setups
   - name: Dashboard
@@ -210,7 +208,7 @@ paths:
   /api/vote/count:
     get:
       tags: [Vote]
-      summary: "[todo] Number of votes cast in the past 24 hours"
+      summary: "[done] Number of votes this week"
       security: []
       responses:
         "200":
@@ -290,21 +288,6 @@ paths:
                 maxItems: 10
                 items:
                   $ref: "#/components/schemas/DailySetup"
-
-  # ── Week ──────────────────────────────────────────────────────────
-  /api/week:
-    get:
-      tags: [Week]
-      summary: "[todo] Current week boundaries (Monday–Sunday UTC)"
-      description: Returns when the current voting week started and when it ends. Week resets every Monday at 00:00 UTC.
-      security: []
-      responses:
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/WeekInfo"
 
   # ── Dashboard ─────────────────────────────────────────────────────
   /api/dashboard:

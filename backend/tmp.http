@@ -1,0 +1,2 @@
+
+GET http://localhost:5065/api/vote/count

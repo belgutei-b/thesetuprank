@@ -18,7 +18,6 @@ public static class VoteEndpoints
                 var userId = ctx.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
                 Guid? voterId = Guid.TryParse(userId, out var parsed) ? parsed : null;
 
-
                 // choosing 2 setups randomly
                 var setups = await db.Setups
                     .Where(s => s.IsActive)
@@ -26,7 +25,6 @@ public static class VoteEndpoints
                     .Take(2)
                     .ToListAsync();
 
-                logger.LogInformation(userId);
                 var battle = new backend.Models.Battle
                 {
                     Setup1Id = setups[0].Id,
@@ -55,7 +53,7 @@ public static class VoteEndpoints
                     Rating = setups[1].Rating
                 };
 
-                return Results.Ok(new VoteGetDto
+                return Results.Ok(new VoteGetResDto
                 {
                     BattleId = battle.Id,
                     SetupA = setupA,
@@ -68,7 +66,9 @@ public static class VoteEndpoints
                 logger.LogError(ex, "GET /api/vote Failed");
                 return Results.Problem("An unexpected error occurred.");
             }
-        }).AllowAnonymous();
+        })
+        .AllowAnonymous()
+        .Produces<VoteGetResDto>(200);
 
         // SubmittedAt & VoterId
         app.MapPost("/api/vote", async (VoteSubmitReqDto request, AppDbContext db, HttpContext ctx, ILogger<Program> logger) =>
@@ -88,11 +88,7 @@ public static class VoteEndpoints
                     ?? throw new Exception("Battle not found");
 
                 var winner = (winnerId == battle.Setup1Id) ? battle.Setup1 : battle.Setup2;
-
-                logger.LogInformation("winner: " + winner.Rating);
-
                 var loser = (loserId == battle.Setup1Id) ? battle.Setup1 : battle.Setup2;
-                logger.LogInformation("loser: " + loser.Rating);
 
                 // calculate rank change of each setup
 
@@ -104,7 +100,6 @@ public static class VoteEndpoints
                 var K = 20;
 
                 var winnerOldRating = winner.Rating;
-                logger.LogInformation("winnerExpectedScore: {Score:F4}", winnerExpectedScore);
 
                 var winnerNewRating = winner.Rating + K * (1.0 - winnerExpectedScore);
 
@@ -118,13 +113,6 @@ public static class VoteEndpoints
                 battle.SubmittedAt = DateTime.UtcNow;
                 await db.SaveChangesAsync();
 
-                logger.LogInformation(
-                    (winnerNewRating - winnerOldRating).ToString()
-                );
-
-                logger.LogInformation(
-(loserNewRating - loserOldRating).ToString()
-                );
                 // return rank change
                 return Results.Ok(new VoteSubmitResDto
                 {
@@ -138,20 +126,33 @@ public static class VoteEndpoints
                 logger.LogError(ex, "POST /api/vote Failed");
                 return Results.Problem("An unexpected error occurred.");
             }
-        }).AllowAnonymous();
+        })
+        .AllowAnonymous()
+        .Produces<VoteSubmitResDto>(200);
 
-        // number of votes in the last 24 hours
-        // TODO: show the number of votes since the beginning of the week
+        // number of votes since the beginning of the week (Monday 00:00 UTC)
         app.MapGet("/api/vote/count", async (AppDbContext db, ILogger<Program> logger) =>
         {
-            DateTime now = DateTime.Now;
-            DateTime timeCutoff = now.AddDays(-1);
+            try
+            {
+                DateTime now = DateTime.UtcNow;
+                int daysFromMonday = ((int)now.DayOfWeek + 6) % 7;
+                // AddDays method gives the day in midnight -> hour and minute is zero
+                DateTime timeCutoff = now.Date.AddDays(-daysFromMonday);
 
-            var count = await db.Battles
-                .Where(u => u.SubmittedAt.HasValue && u.SubmittedAt >= timeCutoff)
-                .CountAsync();
+                var count = await db.Battles
+                    .Where(u => u.SubmittedAt.HasValue && u.SubmittedAt >= timeCutoff)
+                    .CountAsync();
 
-            return Results.Ok(new { count });
-        }).AllowAnonymous();
+                return Results.Ok(new VoteCountResDto { Count = count });
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "GET /api/vote/count Failed");
+                return Results.Problem("An unexpected error occurred.");
+            }
+        })
+        .AllowAnonymous()
+        .Produces<VoteCountResDto>(200);
     }
 }

@@ -1,4 +1,29 @@
+import { useEffect, useState } from "react";
+
+function getTimeRemaining() {
+  const now = new Date();
+  const next = new Date(now);
+  const daysUntilMonday = (8 - now.getUTCDay()) % 7 || 7;
+  next.setUTCDate(now.getUTCDate() + daysUntilMonday);
+  next.setUTCHours(0, 0, 0, 0);
+
+  const diff = next.getTime() - now.getTime();
+  const d = Math.floor(diff / (1000 * 60 * 60 * 24));
+  const h = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+  const m = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+  return { d, h, m };
+}
+
 export function Logo() {
+  const [timeLeft, setTimeLeft] = useState(getTimeRemaining);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setTimeLeft(getTimeRemaining());
+    }, 60_000);
+    return () => clearInterval(interval);
+  }, []);
+
   return (
     <div className="flex flex-col items-center py-8">
       <h1
@@ -31,7 +56,7 @@ export function Logo() {
           letterSpacing: "0.25em",
         }}
       >
-        week ends in 6D 6H 19M
+        week ends in {timeLeft.d}D {timeLeft.h}H {timeLeft.m}M
       </p>
     </div>
   );
