@@ -35,24 +35,11 @@ export default function Home() {
 
   if (isLoading) {
     return (
-      <div
-        style={{
-          display: "flex",
-          gap: 16,
-          padding: "0 24px",
-          marginTop: 16,
-        }}
-      >
+      <div className="flex gap-4 px-6 mt-4">
         {[0, 1].map((i) => (
           <div
             key={i}
-            style={{
-              flex: 1,
-              aspectRatio: "1 / 1",
-              background: "var(--color-surface)",
-              borderRadius: 2,
-              animation: "pulse 1.5s ease-in-out infinite",
-            }}
+            className="flex-1 aspect-square bg-surface rounded-xs animate-pulse"
           />
         ))}
       </div>
@@ -61,31 +48,13 @@ export default function Home() {
 
   if (error) {
     return (
-      <div style={{ textAlign: "center", padding: "40px 24px" }}>
-        <p
-          style={{
-            color: "var(--color-muted)",
-            fontSize: 13,
-            letterSpacing: "1px",
-            fontFamily: "var(--font-sans)",
-            marginBottom: 16,
-          }}
-        >
+      <div className="text-center py-10 px-6">
+        <p className="text-muted text-[13px] tracking-[1px] font-sans mb-4">
           {error}
         </p>
         <button
           onClick={loadNext}
-          style={{
-            fontSize: 11,
-            letterSpacing: "2px",
-            textTransform: "uppercase",
-            color: "#7EB8F7",
-            background: "none",
-            border: "1px solid #7EB8F7",
-            padding: "6px 16px",
-            cursor: "pointer",
-            fontFamily: "var(--font-sans)",
-          }}
+          className="text-[11px] tracking-[2px] uppercase text-accent bg-transparent border border-accent px-4 py-1.5 cursor-pointer font-sans"
         >
           Try Again
         </button>

@@ -16,9 +16,10 @@ export default function VotePair({ battle, onNext }: Props) {
   const { incrementVoteCount } = useAuth();
   const [voteState, setVoteState] = useState<VoteState>("idle");
   const [winner, setWinner] = useState<Winner>(null);
-  const [voteResponse, setVoteResponse] = useState<ApiVoteResponse | null>(null);
+  const [voteResponse, setVoteResponse] = useState<ApiVoteResponse | null>(
+    null,
+  );
 
-  // Reset state when a new battle is loaded
   useEffect(() => {
     setVoteState("idle");
     setWinner(null);
@@ -35,12 +36,15 @@ export default function VotePair({ battle, onNext }: Props) {
     setVoteState("voted");
 
     try {
-      const res = await postVote(battle.battleId, winnerSetup.id, loserSetup.id);
+      const res = await postVote(
+        battle.battleId,
+        winnerSetup.id,
+        loserSetup.id,
+      );
       setVoteResponse(res);
       incrementVoteCount();
       setTimeout(onNext, 1500);
     } catch {
-      // Still advance even if the request failed
       setTimeout(onNext, 1500);
     }
   }
@@ -57,34 +61,23 @@ export default function VotePair({ battle, onNext }: Props) {
   const winnerName =
     winner === "A" ? battle.setupA.description : battle.setupB.description;
 
+  const voted = voteState === "voted";
+
   return (
     <div>
       {/* Instruction text */}
       <p
-        style={{
-          textAlign: "center",
-          fontSize: 11,
-          letterSpacing: "2.5px",
-          textTransform: "uppercase",
-          color: voteState === "voted" ? "#7EB8F7" : "var(--color-muted)",
-          fontFamily: "var(--font-sans)",
-          marginBottom: 4,
-          transition: "color 0.3s ease",
-        }}
+        className={`text-center text-[11px] tracking-[2.5px] uppercase font-sans mb-8 transition-colors duration-300 ${
+          voted ? "text-accent" : "text-muted"
+        }`}
       >
-        {voteState === "idle"
-          ? "— Tap the superior setup —"
-          : `— You voted for ${winnerName} —`}
+        {voted
+          ? `— You voted for ${winnerName} —`
+          : "— Tap the superior setup —"}
       </p>
 
       {/* Photo pair */}
-      <div
-        style={{
-          display: "flex",
-          gap: 16,
-          padding: "0 24px",
-        }}
-      >
+      <div className="flex gap-4 px-6">
         <SetupCard
           setup={battle.setupA}
           state={stateA}
@@ -112,24 +105,14 @@ export default function VotePair({ battle, onNext }: Props) {
       </div>
 
       {/* Skip / Next */}
-      <div style={{ textAlign: "center", marginTop: 16, marginBottom: 20 }}>
+      <div className="text-center mt-4 mb-5">
         <button
           onClick={handleSkip}
-          style={{
-            fontSize: 11,
-            letterSpacing: "2px",
-            textTransform: "uppercase",
-            color: voteState === "voted" ? "#7EB8F7" : "var(--color-muted)",
-            background: "none",
-            border: "none",
-            cursor: "pointer",
-            textDecoration: "underline",
-            textUnderlineOffset: 3,
-            fontFamily: "var(--font-sans)",
-            transition: "color 0.3s ease",
-          }}
+          className={`text-[11px] tracking-[2px] uppercase bg-transparent border-0 cursor-pointer underline underline-offset-[3px] font-sans transition-colors duration-300 ${
+            voted ? "text-accent" : "text-muted"
+          }`}
         >
-          {voteState === "voted" ? "Next Pairing →" : "Skip Pairing"}
+          {voted ? "Next Pairing →" : "Skip Pairing"}
         </button>
       </div>
     </div>

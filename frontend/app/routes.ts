@@ -6,5 +6,4 @@ export default [
   route("submit", "routes/submit.tsx"),
   route("sign-in", "routes/sign-in.tsx"),
   route("profile", "routes/profile.tsx"),
-  route("test-upload", "routes/test-upload.tsx"),
 ] satisfies RouteConfig;

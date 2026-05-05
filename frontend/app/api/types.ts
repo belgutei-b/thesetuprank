@@ -15,6 +15,7 @@ export type User = Omit<ApiUser, "createdAt"> & {
 
 export type ApiSetup = {
   id: string;
+  name: string;
   imageUrl: string;
   description: string;
   rating: number;
