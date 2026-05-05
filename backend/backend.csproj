@@ -22,6 +22,8 @@
 
   <ItemGroup>
     <Folder Include="Data/" />
+    <Folder Include="Dtos/Profile/" />
+    <Folder Include="Dtos/Ranking/" />
     <Folder Include="Endpoints/" />
     <Folder Include="Models/" />
   </ItemGroup>

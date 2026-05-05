@@ -44,4 +44,13 @@ export async function getSetups(): Promise<ApiSetupListItem[]> {
   return res.json();
 }
 
+export async function getRanking(): Promise<{
+  numberOfSetups: number;
+  setups: ApiSetupListItem[];
+}> {
+  const res = await fetch("/api/ranking");
+  if (!res.ok) throw new Error("Failed to fetch ranking");
+  return res.json();
+}
+
 export function deleteSetup() {}

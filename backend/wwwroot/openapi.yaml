@@ -67,7 +67,7 @@ paths:
   /api/setups:
     get:
       tags: [Setups]
-      summary: "[todo] List MY setups with win/loss counts"
+      summary: "[done] List MY setups with win/loss counts"
       responses:
         "200":
           description: OK

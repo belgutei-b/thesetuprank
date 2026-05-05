@@ -5,9 +5,12 @@ import { UtilityBar } from "./UtilityBar";
 
 export function RootLayout() {
   return (
-    <div className="min-h-screen" style={{ backgroundColor: "var(--color-bg)" }}>
+    <div
+      className="min-h-screen"
+      style={{ backgroundColor: "var(--color-bg)" }}
+    >
       <UtilityBar />
-      <div className="max-w-2xl mx-auto">
+      <div className="max-w-3xl mx-auto">
         <Logo />
         <TabNav />
         <main className="py-8">

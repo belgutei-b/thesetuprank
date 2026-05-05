@@ -75,7 +75,6 @@ public static class VoteEndpoints
         {
             try
             {
-
                 var battleId = request.BattleId;
                 var winnerId = request.WinnerId;
                 var loserId = request.LoserId;

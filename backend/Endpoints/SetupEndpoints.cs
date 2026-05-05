@@ -170,5 +170,47 @@ public static class SetupEndpoints
         .Produces(401) // doesn't add any logic / will be caught in Program.cs
         .Produces(500);
 
+        app.MapGet("/api/setups/{setupId}", async (AppDbContext db, HttpContext ctx, ILogger<Program> logger, string setupId) =>
+        {
+            try
+            {
+                var userId = (ctx.User.FindFirst(ClaimTypes.NameIdentifier)?.Value) ?? throw new Exception("null userId");
+                var user = new Guid(userId);
+
+                var setup = await db.Setups
+                    .Where(s => s.IsActive)
+                    .Where(s => s.Id == new Guid(setupId))
+                    .Where(s => s.CreatedBy == user)
+                    .SingleOrDefaultAsync() ?? throw new Exception("Setup not found");
+
+                var setupRet = new SetupListResDto
+                {
+                    Id = setup.Id,
+                    ImageUrl = setup.ImageUrl,
+                    Name = setup.Name,
+                    Description = setup.Description,
+                    FeaturedAt = setup.FeaturedAt,
+                    CreatedAt = setup.CreatedAt,
+                    Wins = 0,
+                    Losses = 0,
+                };
+
+                var wins = await db.Battles
+                    .CountAsync(b => b.WinnerId == new Guid(setupId));
+                setupRet.Wins = wins;
+
+                var losses = await db.Battles
+                    .CountAsync(b => b.LoserId == new Guid(setupId));
+                setupRet.Losses = losses;
+
+                return Results.Ok(setupRet);
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "GET /api/setups/setupId FAILED");
+                return Results.Problem("An unexpected error occurred.");
+            }
+        });
+
     }
 }
