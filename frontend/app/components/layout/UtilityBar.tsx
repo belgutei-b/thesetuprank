@@ -20,9 +20,7 @@ export function UtilityBar() {
       <span>EST. 2026 &nbsp;·&nbsp; WEEK OF {getWeekOf()}</span>
 
       <div className="flex items-center gap-4">
-        {voteCount !== null && (
-          <span>{voteCount} votes</span>
-        )}
+        {voteCount !== null && <span>{voteCount} votes</span>}
         {user ? (
           <>
             <Link
