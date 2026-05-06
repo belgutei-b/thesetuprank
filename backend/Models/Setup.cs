@@ -1,5 +1,8 @@
 namespace backend.Models;
 
+// Principal (Parent): Setup
+// Dependent (Child): SavedSetup
+// one-to-many relationship between Setup and SavedSetup
 public class Setup
 {
     public Guid Id { get; set; }
@@ -11,4 +14,7 @@ public class Setup
     public bool IsActive { get; set; } = true;
     public DateTime? FeaturedAt { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public int ReportCount { get; set; } = 0;
+    public User User { get; set; } = null!;
+    public ICollection<SavedSetup> SavedSetups { get; } = new List<SavedSetup>();
 }

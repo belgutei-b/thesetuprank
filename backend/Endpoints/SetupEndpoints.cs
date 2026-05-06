@@ -170,7 +170,7 @@ public static class SetupEndpoints
         .Produces(401) // doesn't add any logic / will be caught in Program.cs
         .Produces(500);
 
-        app.MapGet("/api/setups/{setupId}", async (AppDbContext db, HttpContext ctx, ILogger<Program> logger, string setupId) =>
+        app.MapGet("/api/setups/{setupId:guid}", async (AppDbContext db, HttpContext ctx, ILogger<Program> logger, Guid setupId) =>
         {
             try
             {
@@ -179,7 +179,7 @@ public static class SetupEndpoints
 
                 var setup = await db.Setups
                     .Where(s => s.IsActive)
-                    .Where(s => s.Id == new Guid(setupId))
+                    .Where(s => s.Id == setupId)
                     .Where(s => s.CreatedBy == user)
                     .SingleOrDefaultAsync() ?? throw new Exception("Setup not found");
 
@@ -196,11 +196,11 @@ public static class SetupEndpoints
                 };
 
                 var wins = await db.Battles
-                    .CountAsync(b => b.WinnerId == new Guid(setupId));
+                    .CountAsync(b => b.WinnerId == setupId);
                 setupRet.Wins = wins;
 
                 var losses = await db.Battles
-                    .CountAsync(b => b.LoserId == new Guid(setupId));
+                    .CountAsync(b => b.LoserId == setupId);
                 setupRet.Losses = losses;
 
                 return Results.Ok(setupRet);
@@ -212,5 +212,32 @@ public static class SetupEndpoints
             }
         });
 
+
+        // Unauthenticated users can report setup
+        app.MapPost("/api/setups/report/{setupId:guid}", async (AppDbContext db, HttpContext ctx, ILogger<Program> logger, Guid setupId) =>
+        {
+            try
+            {
+                var setup = await db.Setups
+                    .Where(s => s.Id == setupId)
+                    .SingleOrDefaultAsync();
+
+                if (setup is null)
+                {
+                    return Results.NotFound();
+                }
+
+                setup.ReportCount += 1;
+
+                await db.SaveChangesAsync();
+
+                return Results.Ok();
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "POST /api/setups/report/setupId FAILED");
+                return Results.Problem("An unexpected error occurred.");
+            }
+        }).AllowAnonymous();
     }
 }

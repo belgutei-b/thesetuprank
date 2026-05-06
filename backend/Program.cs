@@ -159,5 +159,6 @@ app.MapSetupEndpoints();
 app.MapAuthEndpoints();
 app.MapVoteEndpoints();
 app.MapRankingEndpoints();
+app.MapSavesEndpoints();
 
 app.Run();

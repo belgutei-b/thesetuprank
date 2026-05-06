@@ -10,4 +10,6 @@ public class User
     public required string ImageUrl { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public required bool IsActive { get; set; } = true;
+    public ICollection<Setup> Setups { get; } = new List<Setup>();
+    public ICollection<SavedSetup> SavedSetups { get; } = new List<SavedSetup>();
 }

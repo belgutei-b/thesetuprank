@@ -1,2 +1,2 @@
 
-GET http://localhost:5065/api/ranking
+POST http://localhost:5065/api/setups/report/e8bd3795-4712-4bd7-6291-08dea5b47754

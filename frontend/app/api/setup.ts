@@ -54,3 +54,10 @@ export async function getRanking(): Promise<{
 }
 
 export function deleteSetup() {}
+
+export async function reportSetup(setupId: string): Promise<void> {
+  const res = await fetch(`/api/setups/report/${setupId}`, {
+    method: "POST",
+  });
+  if (!res.ok) throw new Error("Failed to report setup");
+}

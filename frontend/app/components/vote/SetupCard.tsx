@@ -1,4 +1,6 @@
+import { useState } from "react";
 import type { ApiSetupBrief } from "~/api/types";
+import { reportSetup } from "~/api/setup";
 
 type CardState = "idle" | "winner" | "loser";
 
@@ -13,6 +15,19 @@ export default function SetupCard({ setup, state, ratingDiff, onVote }: Props) {
   const isIdle = state === "idle";
   const isWinner = state === "winner";
   const isLoser = state === "loser";
+
+  const [reportStatus, setReportStatus] = useState<"idle" | "loading" | "done" | "error">("idle");
+
+  async function handleReport() {
+    if (reportStatus !== "idle") return;
+    setReportStatus("loading");
+    try {
+      await reportSetup(setup.id);
+      setReportStatus("done");
+    } catch {
+      setReportStatus("error");
+    }
+  }
 
   return (
     <div className="flex flex-col gap-[6px] flex-1 min-w-0">
@@ -66,8 +81,15 @@ export default function SetupCard({ setup, state, ratingDiff, onVote }: Props) {
         <button className="text-[10px] tracking-[1.5px] uppercase text-accent bg-transparent border-0 cursor-pointer font-sans p-0">
           ↳ Save
         </button>
-        <button className="text-[10px] tracking-[1.5px] uppercase text-muted bg-transparent border-0 cursor-pointer font-sans p-0">
-          ⚑ Report
+        <button
+          onClick={handleReport}
+          disabled={reportStatus !== "idle"}
+          className="text-[10px] tracking-[1.5px] uppercase bg-transparent border-0 font-sans p-0 disabled:cursor-default cursor-pointer text-muted disabled:opacity-50"
+        >
+          {reportStatus === "loading" && "⚑ Reporting..."}
+          {reportStatus === "done" && "⚑ Reported"}
+          {reportStatus === "error" && "⚑ Failed"}
+          {reportStatus === "idle" && "⚑ Report"}
         </button>
       </div>
     </div>

@@ -58,6 +58,30 @@ namespace backend.Migrations
                     b.ToTable("Battles");
                 });
 
+            modelBuilder.Entity("backend.Models.SavedSetup", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid>("SetupId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SetupId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("SavedSetups");
+                });
+
             modelBuilder.Entity("backend.Models.Setup", b =>
                 {
                     b.Property<Guid>("Id")
@@ -91,7 +115,12 @@ namespace backend.Migrations
                     b.Property<int>("Rating")
                         .HasColumnType("int");
 
+                    b.Property<int>("ReportCount")
+                        .HasColumnType("int");
+
                     b.HasKey("Id");
+
+                    b.HasIndex("CreatedBy");
 
                     b.ToTable("Setups");
                 });
@@ -146,6 +175,48 @@ namespace backend.Migrations
                     b.Navigation("Setup1");
 
                     b.Navigation("Setup2");
+                });
+
+            modelBuilder.Entity("backend.Models.SavedSetup", b =>
+                {
+                    b.HasOne("backend.Models.Setup", "Setup")
+                        .WithMany("SavedSetups")
+                        .HasForeignKey("SetupId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("backend.Models.User", "User")
+                        .WithMany("SavedSetups")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.Navigation("Setup");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("backend.Models.Setup", b =>
+                {
+                    b.HasOne("backend.Models.User", "User")
+                        .WithMany("Setups")
+                        .HasForeignKey("CreatedBy")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("backend.Models.Setup", b =>
+                {
+                    b.Navigation("SavedSetups");
+                });
+
+            modelBuilder.Entity("backend.Models.User", b =>
+                {
+                    b.Navigation("SavedSetups");
+
+                    b.Navigation("Setups");
                 });
 #pragma warning restore 612, 618
         }
