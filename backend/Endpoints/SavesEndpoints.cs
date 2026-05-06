@@ -47,7 +47,31 @@ public static class SavesEndpoints
         // unsave setup
         app.MapDelete("/api/saves/{setupId:guid}", async (AppDbContext db, HttpContext ctx, ILogger<Program> logger, Guid setupId) =>
         {
-            return Results.Ok();
+            var rawUserId = (ctx.User.FindFirst(ClaimTypes.NameIdentifier)?.Value);
+            if (rawUserId is null) return Results.Unauthorized();
+
+            try
+            {
+                Guid userId = new(rawUserId);
+
+                // because (UserId, SetupId) is a unique pair
+                // it will affect up to 1 row
+                var numberOfDeletedRows = await db.SavedSetups
+                    .Where(s => s.UserId == userId && s.SetupId == setupId)
+                    .ExecuteDeleteAsync();
+
+                if (numberOfDeletedRows == 0)
+                {
+                    return Results.NotFound();
+                }
+
+                return Results.Ok();
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "DELETE /api/save/setupId Failed");
+                return Results.Problem("An unexpected error occurred.");
+            }
         });
 
         // current authenticated users all saved setups
@@ -58,7 +82,6 @@ public static class SavesEndpoints
             try
             {
                 var rawUserId = (ctx.User.FindFirst(ClaimTypes.NameIdentifier)?.Value) ?? throw new Exception("null userId");
-
                 Guid userId = new(rawUserId);
 
                 var setups = await db.SavedSetups
@@ -72,7 +95,7 @@ public static class SavesEndpoints
             }
             catch (Exception ex)
             {
-                logger.LogError(ex, "GET /api/save Failed");
+                logger.LogError(ex, "GET /api/saves Failed");
                 return Results.Problem("An unexpected error occurred.");
             }
         });

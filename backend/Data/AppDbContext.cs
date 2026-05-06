@@ -44,6 +44,11 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             .HasForeignKey(b => b.Setup2Id)
             .OnDelete(DeleteBehavior.NoAction);
 
+        // (UserId, SetupId) pair has to be unique
+        modelBuilder.Entity<SavedSetup>()
+            .HasIndex(s => new { s.UserId, s.SetupId })
+            .IsUnique();
+
         modelBuilder.Entity<SavedSetup>()
             .HasQueryFilter(s => s.Setup.IsActive);
 

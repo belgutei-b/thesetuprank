@@ -77,7 +77,8 @@ namespace backend.Migrations
 
                     b.HasIndex("SetupId");
 
-                    b.HasIndex("UserId");
+                    b.HasIndex("UserId", "SetupId")
+                        .IsUnique();
 
                     b.ToTable("SavedSetups");
                 });
