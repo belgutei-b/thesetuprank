@@ -46,6 +46,8 @@ export type ApiVoteGet = {
   battleId: string;
   setupA: ApiSetupBrief;
   setupB: ApiSetupBrief;
+  isSavedSetupA: boolean;
+  isSavedSetupB: boolean;
 };
 
 export type ApiVoteResponse = {

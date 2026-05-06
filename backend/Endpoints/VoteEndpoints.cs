@@ -25,6 +25,19 @@ public static class VoteEndpoints
                     .Take(2)
                     .ToListAsync();
 
+                bool isSavedSetupA = false;
+                bool isSavedSetupB = false;
+                if (voterId.HasValue)
+                {
+                    isSavedSetupA = await db.SavedSetups
+                        .Where(s => s.UserId == voterId && setups[0].Id == s.SetupId)
+                        .AnyAsync();
+
+                    isSavedSetupB = await db.SavedSetups
+                        .Where(s => s.UserId == voterId && setups[1].Id == s.SetupId)
+                        .AnyAsync();
+                }
+
                 var battle = new backend.Models.Battle
                 {
                     Setup1Id = setups[0].Id,
@@ -57,7 +70,9 @@ public static class VoteEndpoints
                 {
                     BattleId = battle.Id,
                     SetupA = setupA,
-                    SetupB = setupB
+                    SetupB = setupB,
+                    IsSavedSetupA = isSavedSetupA,
+                    IsSavedSetupB = isSavedSetupB
                 });
             }
             catch (Exception ex)

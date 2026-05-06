@@ -1,6 +1,8 @@
 import { useState } from "react";
+import toast from "react-hot-toast";
 import type { ApiSetupBrief } from "~/api/types";
 import { reportSetup } from "~/api/setup";
+import { saveSetup, unsaveSetup } from "~/api/saved";
 
 type CardState = "idle" | "winner" | "loser";
 
@@ -9,14 +11,47 @@ type Props = {
   state: CardState;
   ratingDiff?: number;
   onVote: () => void;
+  initialSaved?: boolean;
 };
 
-export default function SetupCard({ setup, state, ratingDiff, onVote }: Props) {
+export default function SetupCard({ setup, state, ratingDiff, onVote, initialSaved = false }: Props) {
   const isIdle = state === "idle";
   const isWinner = state === "winner";
   const isLoser = state === "loser";
 
-  const [reportStatus, setReportStatus] = useState<"idle" | "loading" | "done" | "error">("idle");
+  const [reportStatus, setReportStatus] = useState<
+    "idle" | "loading" | "done" | "error"
+  >("idle");
+  const [saveStatus, setSaveStatus] = useState<"idle" | "loading" | "done">(
+    initialSaved ? "done" : "idle",
+  );
+
+  async function handleSave() {
+    if (saveStatus === "loading") return;
+    setSaveStatus("loading");
+    try {
+      if (saveStatus === "done") {
+        await unsaveSetup(setup.id);
+        setSaveStatus("idle");
+        toast.success("Removed from saves");
+      } else {
+        await saveSetup(setup.id);
+        setSaveStatus("done");
+        toast.success("Successfully saved");
+      }
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "";
+      if (msg === "already_saved") {
+        setSaveStatus("done");
+        toast.success("Successfully saved");
+      } else if (msg === "unauthenticated") {
+        setSaveStatus("idle");
+        toast.error("Sign in to save the setup");
+      } else {
+        setSaveStatus("idle");
+      }
+    }
+  }
 
   async function handleReport() {
     if (reportStatus !== "idle") return;
@@ -78,15 +113,19 @@ export default function SetupCard({ setup, state, ratingDiff, onVote }: Props) {
 
       {/* Actions */}
       <div className="flex gap-[14px] mt-1">
-        <button className="text-[10px] tracking-[1.5px] uppercase text-accent bg-transparent border-0 cursor-pointer font-sans p-0">
-          ↳ Save
+        <button
+          onClick={handleSave}
+          disabled={saveStatus === "loading"}
+          className="text-[10px] tracking-[1.5px] uppercase bg-transparent border-0 font-sans p-0 disabled:cursor-default cursor-pointer text-accent"
+        >
+          {saveStatus === "done" ? "↳ Saved" : "↳ Save"}
         </button>
         <button
           onClick={handleReport}
           disabled={reportStatus !== "idle"}
           className="text-[10px] tracking-[1.5px] uppercase bg-transparent border-0 font-sans p-0 disabled:cursor-default cursor-pointer text-muted disabled:opacity-50"
         >
-          {reportStatus === "loading" && "⚑ Reporting..."}
+          {reportStatus === "loading" && "⚑ Report"}
           {reportStatus === "done" && "⚑ Reported"}
           {reportStatus === "error" && "⚑ Failed"}
           {reportStatus === "idle" && "⚑ Report"}

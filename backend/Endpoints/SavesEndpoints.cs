@@ -44,6 +44,12 @@ public static class SavesEndpoints
             }
         });
 
+        // unsave setup
+        app.MapDelete("/api/saves/{setupId:guid}", async (AppDbContext db, HttpContext ctx, ILogger<Program> logger, Guid setupId) =>
+        {
+            return Results.Ok();
+        });
+
         // current authenticated users all saved setups
         // currently returns the first 20 setups
         // TODO: need to add pagination to this endpoint

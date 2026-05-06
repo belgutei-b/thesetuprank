@@ -89,6 +89,7 @@ export default function VotePair({ battle, onNext }: Props) {
               : undefined
           }
           onVote={() => handleVote("A")}
+          initialSaved={battle.isSavedSetupA}
         />
         <SetupCard
           setup={battle.setupB}
@@ -101,6 +102,7 @@ export default function VotePair({ battle, onNext }: Props) {
               : undefined
           }
           onVote={() => handleVote("B")}
+          initialSaved={battle.isSavedSetupB}
         />
       </div>
 
