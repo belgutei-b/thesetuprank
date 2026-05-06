@@ -1,3 +1,5 @@
+import type { ApiSetupListItem } from "~/api/types";
+
 export async function saveSetup(setupId: string): Promise<void> {
   const res = await fetch(`/api/saves/${setupId}`, {
     method: "POST",
@@ -8,7 +10,11 @@ export async function saveSetup(setupId: string): Promise<void> {
   if (!res.ok) throw new Error("failed");
 }
 
-export async function getSavedSetups() {}
+export async function getSavedSetups(): Promise<ApiSetupListItem[]> {
+  const res = await fetch("/api/saves", { credentials: "include" });
+  if (!res.ok) throw new Error("failed");
+  return res.json();
+}
 
 export async function unsaveSetup(setupId: string): Promise<void> {
   const res = await fetch(`/api/saves/${setupId}`, {

@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using backend.Data;
+using backend.Dtos;
 using Microsoft.EntityFrameworkCore;
 
 namespace backend.Endpoints;
@@ -84,21 +85,42 @@ public static class SavesEndpoints
                 var rawUserId = (ctx.User.FindFirst(ClaimTypes.NameIdentifier)?.Value) ?? throw new Exception("null userId");
                 Guid userId = new(rawUserId);
 
-                var setups = await db.SavedSetups
+                var savedSetups = await db.SavedSetups
                     .Where(s => s.UserId == userId)
                     .OrderBy(s => s.CreatedAt)
                     .Take(20)
                     .Include(s => s.Setup)
                     .ToListAsync();
 
-                return Results.Ok();
+                var setupIds = savedSetups.Select(s => s.SetupId).ToList();
+
+                var battles = await db.Battles
+                    .Where(b => b.SubmittedAt.HasValue)
+                    .Where(b => setupIds.Contains(b.Setup1Id) || setupIds.Contains(b.Setup2Id))
+                    .ToListAsync();
+
+                var result = savedSetups.Select(s => new SetupListResDto
+                {
+                    Id = s.Setup.Id,
+                    ImageUrl = s.Setup.ImageUrl,
+                    Name = s.Setup.Name,
+                    Description = s.Setup.Description,
+                    Rating = s.Setup.Rating,
+                    FeaturedAt = s.Setup.FeaturedAt,
+                    CreatedAt = s.Setup.CreatedAt,
+                    Wins = battles.Count(b => b.WinnerId == s.SetupId),
+                    Losses = battles.Count(b => b.LoserId == s.SetupId),
+                }).ToList();
+
+                return Results.Ok(result);
             }
             catch (Exception ex)
             {
                 logger.LogError(ex, "GET /api/saves Failed");
                 return Results.Problem("An unexpected error occurred.");
             }
-        });
+        })
+        .Produces<List<SetupListResDto>>(200);
 
         // TODO: DELETE /api/save
     }
