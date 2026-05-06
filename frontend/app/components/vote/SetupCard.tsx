@@ -3,6 +3,8 @@ import toast from "react-hot-toast";
 import type { ApiSetupBrief } from "~/api/types";
 import { reportSetup } from "~/api/setup";
 import { saveSetup, unsaveSetup } from "~/api/saved";
+import SetupDetailModal from "~/components/setup/SetupDetailModal";
+import { Expand } from "lucide-react";
 
 type CardState = "idle" | "winner" | "loser";
 
@@ -25,6 +27,7 @@ export default function SetupCard({
   const isWinner = state === "winner";
   const isLoser = state === "loser";
 
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const [reportStatus, setReportStatus] = useState<
     "idle" | "loading" | "done" | "error"
   >("idle");
@@ -87,6 +90,17 @@ export default function SetupCard({
           className="w-full h-full object-cover"
         />
 
+        {/* Expand button */}
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            setIsModalOpen(true);
+          }}
+          className="absolute top-2 right-2 bg-black/50 border-0 text-white/60 hover:text-white/90 cursor-pointer p-1 transition-colors"
+        >
+          <Expand size={16} />
+        </button>
+
         {/* YOUR PICK badge — shown on winner */}
         {isWinner && (
           <div className="absolute top-[10px] left-[10px] border-[1.5px] border-accent text-accent bg-bg/80 text-[10px] tracking-[2px] uppercase px-[10px] py-[2px] font-sans">
@@ -139,6 +153,10 @@ export default function SetupCard({
           {reportStatus === "idle" && "⚑ Report"}
         </button>
       </div>
+
+      {isModalOpen && (
+        <SetupDetailModal setup={setup} onClose={() => setIsModalOpen(false)} />
+      )}
     </div>
   );
 }

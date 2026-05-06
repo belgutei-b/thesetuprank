@@ -1,8 +1,18 @@
 import { useEffect } from "react";
-import type { ApiSetupListItem } from "~/api/types";
+import { X } from "lucide-react";
+
+type ModalSetup = {
+  name: string;
+  imageUrl: string;
+  description: string;
+  rating: number;
+  wins?: number;
+  losses?: number;
+  createdAt?: string;
+};
 
 type Props = {
-  setup: ApiSetupListItem;
+  setup: ModalSetup;
   onClose: () => void;
 };
 
@@ -15,11 +25,13 @@ export default function SetupDetailModal({ setup, onClose }: Props) {
     return () => window.removeEventListener("keydown", handleKey);
   }, [onClose]);
 
-  const addedDate = new Date(setup.createdAt).toLocaleDateString("en-AU", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
+  const addedDate = setup.createdAt
+    ? new Date(setup.createdAt).toLocaleDateString("en-AU", {
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+      })
+    : null;
 
   return (
     <div
@@ -28,21 +40,21 @@ export default function SetupDetailModal({ setup, onClose }: Props) {
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="relative bg-surface border border-[#222] flex max-w-200 w-full"
+        className="relative bg-surface border border-[#222] flex max-w-150 w-full"
       >
         {/* Close button */}
         <button
           onClick={onClose}
-          className="absolute top-2.5 right-3 bg-transparent border-0 text-[#555] text-[18px] leading-none cursor-pointer"
+          className="absolute top-2.5 right-3 bg-transparent border-0 text-[#555] hover:text-[#999] cursor-pointer p-0 transition-colors"
         >
-          ×
+          <X size={16} />
         </button>
 
         {/* Image */}
         <img
           src={setup.imageUrl}
           alt={setup.name}
-          className="w-90 min-w-55 aspect-square object-cover block"
+          className="w-90 aspect-square object-cover block"
         />
 
         {/* Details */}
@@ -51,17 +63,21 @@ export default function SetupDetailModal({ setup, onClose }: Props) {
             {setup.name}
           </p>
 
-          <p className="font-sans text-[13px] text-muted m-0 leading-relaxed">
+          <p className="font-sans text-[13px] text-zinc-300 m-0 leading-relaxed">
             {setup.description}
           </p>
 
-          <p className="font-sans text-[11px] tracking-[1.5px] uppercase text-[#555] m-0">
-            {setup.wins}W · {setup.losses}L · ELO {setup.rating}
-          </p>
+          {setup.wins !== undefined && setup.losses !== undefined && (
+            <p className="font-sans text-[11px] tracking-[1.5px] uppercase text-[#555] m-0">
+              {setup.wins}W · {setup.losses}L · ELO {setup.rating}
+            </p>
+          )}
 
-          <p className="font-sans text-[11px] tracking-[1.5px] uppercase text-[#444] m-0">
-            Added {addedDate}
-          </p>
+          {addedDate && (
+            <p className="font-sans text-[11px] tracking-[1.5px] uppercase text-[#444] m-0">
+              Added {addedDate}
+            </p>
+          )}
         </div>
       </div>
     </div>
