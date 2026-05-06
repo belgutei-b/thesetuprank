@@ -46,7 +46,20 @@ export function Layout({ children }: { children: React.ReactNode }) {
 export default function App() {
   return (
     <AuthProvider>
-      <Toaster />
+      <Toaster
+        position="bottom-right"
+        toastOptions={{
+          style: {
+            background: "#161616",
+            color: "#e8e8e8",
+            border: "1px solid #222",
+            borderRadius: "2px",
+            fontSize: "13px",
+            letterSpacing: "0.5px",
+            padding: "12px 16px",
+          },
+        }}
+      />
       <RootLayout />
     </AuthProvider>
   );

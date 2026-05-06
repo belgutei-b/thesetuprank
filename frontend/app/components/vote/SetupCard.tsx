@@ -14,7 +14,13 @@ type Props = {
   initialSaved?: boolean;
 };
 
-export default function SetupCard({ setup, state, ratingDiff, onVote, initialSaved = false }: Props) {
+export default function SetupCard({
+  setup,
+  state,
+  ratingDiff,
+  onVote,
+  initialSaved = false,
+}: Props) {
   const isIdle = state === "idle";
   const isWinner = state === "winner";
   const isLoser = state === "loser";
@@ -59,8 +65,10 @@ export default function SetupCard({ setup, state, ratingDiff, onVote, initialSav
     try {
       await reportSetup(setup.id);
       setReportStatus("done");
+      toast.success("Report submitted");
     } catch {
       setReportStatus("error");
+      toast.error("Failed to submit report");
     }
   }
 

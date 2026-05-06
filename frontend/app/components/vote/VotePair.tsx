@@ -58,22 +58,13 @@ export default function VotePair({ battle, onNext }: Props) {
   const stateB =
     voteState === "idle" ? "idle" : winner === "B" ? "winner" : "loser";
 
-  const winnerName =
-    winner === "A" ? battle.setupA.description : battle.setupB.description;
-
   const voted = voteState === "voted";
 
   return (
     <div>
       {/* Instruction text */}
-      <p
-        className={`text-center text-[11px] tracking-[2.5px] uppercase font-sans mb-8 transition-colors duration-300 ${
-          voted ? "text-accent" : "text-muted"
-        }`}
-      >
-        {voted
-          ? `— You voted for ${winnerName} —`
-          : "— Tap the superior setup —"}
+      <p className="text-center text-[11px] tracking-[2.5px] uppercase font-sans mb-8 transition-colors duration-300 text-muted">
+        — Tap the superior setup —
       </p>
 
       {/* Photo pair */}
