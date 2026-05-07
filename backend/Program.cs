@@ -10,6 +10,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using Microsoft.AspNetCore.HttpOverrides;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -68,15 +69,21 @@ builder.Services.AddAuthentication(o =>
             signingCredentials: new SigningCredentials(signingKey, SecurityAlgorithms.HmacSha256)
         ));
 
+        // in production
+        // Secure = true
+        bool isCookieSecure = builder.Environment.IsProduction();
+
         ctx.Response.Cookies.Append("auth_token", jwt, new CookieOptions
         {
             HttpOnly = true, // client side js can't access it
             SameSite = SameSiteMode.Lax,
-            Secure = false, // over https only / set to true in production
+            Secure = isCookieSecure, // over https only
             Expires = DateTimeOffset.UtcNow.AddDays(7),
         });
 
-        ctx.Response.Redirect($"http://localhost:5173/");
+        // since front-end and backend is in the same origin, "/" works
+        var frontendUrl = builder.Configuration["App:FrontendUrl"] ?? "/";
+        ctx.Response.Redirect(frontendUrl);
         ctx.HandleResponse();
     };
 })
@@ -112,15 +119,24 @@ builder.Services.AddAuthorization(options =>
         .Build();
 });
 
-builder.Services.AddCors(options =>
+// cors only in development
+if (builder.Environment.IsDevelopment())
 {
-    options.AddDefaultPolicy(policy =>
+    builder.Services.AddCors(options =>
     {
-        policy.WithOrigins("http://localhost:5173")
-              .AllowAnyHeader()
-              .AllowAnyMethod()
-              .AllowCredentials();
+        options.AddDefaultPolicy(p => p
+            .WithOrigins("http://localhost:5173")
+            .AllowAnyHeader()
+            .AllowAnyMethod()
+            .AllowCredentials());
     });
+}
+
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
+{
+    options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+    options.KnownIPNetworks.Clear();
+    options.KnownProxies.Clear();
 });
 
 var app = builder.Build();
@@ -131,13 +147,20 @@ using (var scope = app.Services.CreateScope())
     db.Database.Migrate();
 }
 
+
 // Swagger UI pointing to your YAML
 app.UseSwaggerUI(c =>
 {
     c.SwaggerEndpoint("/openapi.yaml", "Rate Setup API");
 });
 
-app.UseCors();
+// cors only in development
+if (app.Environment.IsDevelopment())
+{
+    app.UseCors();
+}
+
+app.UseForwardedHeaders();
 app.UseAuthentication();
 app.UseAuthorization();
 
