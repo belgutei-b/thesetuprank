@@ -1,5 +1,3 @@
-using System;
-
 namespace backend.Dtos.Ranking;
 
 public class RankingResDto

@@ -1,5 +1,3 @@
-using System;
-
 namespace backend.Dtos.Vote;
 
 public class VoteGetResDto
