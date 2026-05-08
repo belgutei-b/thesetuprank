@@ -35,6 +35,19 @@ builder.Services.AddAuthentication(o =>
     o.ClientSecret = builder.Configuration["Authentication:Google:ClientSecret"]!;
     o.CallbackPath = "/api/signin-google";
 
+    o.Events.OnRemoteFailure = ctx =>
+    {
+        Console.Error.WriteLine($"[OAuth] OnRemoteFailure: {ctx.Failure?.GetType().Name}: {ctx.Failure?.Message}");
+        Console.Error.WriteLine(ctx.Failure?.ToString());
+        return Task.CompletedTask;
+    };
+
+    o.Events.OnAccessDenied = ctx =>
+    {
+        Console.Error.WriteLine("[OAuth] OnAccessDenied");
+        return Task.CompletedTask;
+    };
+
     // after google redirects back
     // OnTicketReceived fires
     o.Events.OnTicketReceived = async ctx =>
