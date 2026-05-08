@@ -39,53 +39,70 @@ builder.Services.AddAuthentication(o =>
     // OnTicketReceived fires
     o.Events.OnTicketReceived = async ctx =>
     {
-        var claims = ctx.Principal?.Claims ?? [];
-        var email = claims.FirstOrDefault(c => c.Type == ClaimTypes.Email)?.Value ?? "";
-        var name = claims.FirstOrDefault(c => c.Type == ClaimTypes.Name)?.Value ?? "";
-        var imageUrl = claims.FirstOrDefault(c => c.Type == "picture")?.Value ?? "";
-
-        // create user if first time signing in
-        var db = ctx.HttpContext.RequestServices.GetRequiredService<AppDbContext>();
-        var user = await db.Users.FirstOrDefaultAsync(u => u.Email == email);
-        if (user == null)
+        try
         {
-            user = new backend.Models.User
+            Console.WriteLine("[OAuth] OnTicketReceived START");
+
+            var claims = ctx.Principal?.Claims ?? [];
+            var email = claims.FirstOrDefault(c => c.Type == ClaimTypes.Email)?.Value ?? "";
+            var name = claims.FirstOrDefault(c => c.Type == ClaimTypes.Name)?.Value ?? "";
+            var imageUrl = claims.FirstOrDefault(c => c.Type == "picture")?.Value ?? "";
+            Console.WriteLine($"[OAuth] claims parsed email={email} name={name}");
+
+            // create user if first time signing in
+            var db = ctx.HttpContext.RequestServices.GetRequiredService<AppDbContext>();
+            Console.WriteLine("[OAuth] querying user");
+            var user = await db.Users.FirstOrDefaultAsync(u => u.Email == email);
+            Console.WriteLine($"[OAuth] user lookup done, exists={user != null}");
+            if (user == null)
             {
-                Email = email,
-                Name = name,
-                IsActive = true,
-                ImageUrl = imageUrl,
-                Handle = name,
-            };
-            db.Users.Add(user);
-            await db.SaveChangesAsync();
+                user = new backend.Models.User
+                {
+                    Email = email,
+                    Name = name,
+                    IsActive = true,
+                    ImageUrl = imageUrl,
+                    Handle = name,
+                };
+                db.Users.Add(user);
+                await db.SaveChangesAsync();
+                Console.WriteLine($"[OAuth] new user created id={user.Id}");
+            }
+
+
+            var jwt = new JwtSecurityTokenHandler().WriteToken(new JwtSecurityToken(
+                issuer: "rate-setup",
+                audience: "rate-setup",
+                claims: [new Claim(ClaimTypes.Email, email), new Claim(ClaimTypes.Name, name), new Claim(ClaimTypes.NameIdentifier, user.Id.ToString())],
+                expires: DateTime.UtcNow.AddDays(7),
+                signingCredentials: new SigningCredentials(signingKey, SecurityAlgorithms.HmacSha256)
+            ));
+            Console.WriteLine("[OAuth] jwt issued");
+
+            // in production
+            // Secure = true
+            bool isCookieSecure = builder.Environment.IsProduction();
+
+            ctx.Response.Cookies.Append("auth_token", jwt, new CookieOptions
+            {
+                HttpOnly = true, // client side js can't access it
+                SameSite = SameSiteMode.Lax,
+                Secure = isCookieSecure, // over https only
+                Expires = DateTimeOffset.UtcNow.AddDays(7),
+            });
+
+            // since front-end and backend is in the same origin, "/" works
+            var frontendUrl = builder.Configuration["App:FrontendUrl"] ?? "/";
+            Console.WriteLine($"[OAuth] redirecting to {frontendUrl}");
+            ctx.Response.Redirect(frontendUrl);
+            ctx.HandleResponse();
         }
-
-
-        var jwt = new JwtSecurityTokenHandler().WriteToken(new JwtSecurityToken(
-            issuer: "rate-setup",
-            audience: "rate-setup",
-            claims: [new Claim(ClaimTypes.Email, email), new Claim(ClaimTypes.Name, name), new Claim(ClaimTypes.NameIdentifier, user.Id.ToString())],
-            expires: DateTime.UtcNow.AddDays(7),
-            signingCredentials: new SigningCredentials(signingKey, SecurityAlgorithms.HmacSha256)
-        ));
-
-        // in production
-        // Secure = true
-        bool isCookieSecure = builder.Environment.IsProduction();
-
-        ctx.Response.Cookies.Append("auth_token", jwt, new CookieOptions
+        catch (Exception ex)
         {
-            HttpOnly = true, // client side js can't access it
-            SameSite = SameSiteMode.Lax,
-            Secure = isCookieSecure, // over https only
-            Expires = DateTimeOffset.UtcNow.AddDays(7),
-        });
-
-        // since front-end and backend is in the same origin, "/" works
-        var frontendUrl = builder.Configuration["App:FrontendUrl"] ?? "/";
-        ctx.Response.Redirect(frontendUrl);
-        ctx.HandleResponse();
+            Console.WriteLine($"[OAuth] EXCEPTION {ex.GetType().Name}: {ex.Message}");
+            Console.WriteLine(ex.ToString());
+            throw;
+        }
     };
 })
 .AddJwtBearer(o =>
