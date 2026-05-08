@@ -11,8 +11,20 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.AspNetCore.HttpOverrides;
+using Microsoft.AspNetCore.DataProtection;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// Persist Data Protection keys on the App Service /home mount so the OAuth
+// correlation cookie survives container restarts.
+if (builder.Environment.IsProduction())
+{
+    var keysDir = new DirectoryInfo("/home/DataProtection-Keys");
+    keysDir.Create();
+    builder.Services.AddDataProtection()
+        .PersistKeysToFileSystem(keysDir)
+        .SetApplicationName("setuprank-backend");
+}
 
 var jwtKey = builder.Configuration["Jwt:Key"]
     ?? throw new InvalidOperationException("Jwt:Key is not configured");
