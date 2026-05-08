@@ -3,13 +3,11 @@
     "rewrite": "/index.html",
     "exclude": [
       "/api/*",
-      "/signin-google*",
       "/assets/*",
       "*.{css,js,png,jpg,jpeg,svg,ico,woff2}"
     ]
   },
   "routes": [
-    { "route": "/api/*", "allowedRoles": ["anonymous"] },
-    { "route": "/signin-google*", "allowedRoles": ["anonymous"] }
+    { "route": "/api/*", "allowedRoles": ["anonymous"] }
   ]
 }

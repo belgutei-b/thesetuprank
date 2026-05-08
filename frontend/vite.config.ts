@@ -14,10 +14,6 @@ export default defineConfig({
         target: "http://localhost:5065",
         changeOrigin: true,
       },
-      "/signin-google": {
-        target: "http://localhost:5065",
-        changeOrigin: true,
-      },
     },
   },
 });
