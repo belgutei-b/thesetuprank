@@ -161,6 +161,20 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseForwardedHeaders();
+
+// In production, force Request.Host/Scheme to the public hostname so OAuth
+// redirect_uri is built correctly even if SWA doesn't forward X-Forwarded-Host.
+var publicHost = builder.Configuration["App:PublicHost"];
+if (!string.IsNullOrEmpty(publicHost))
+{
+    app.Use((ctx, next) =>
+    {
+        ctx.Request.Host = new HostString(publicHost);
+        ctx.Request.Scheme = "https";
+        return next();
+    });
+}
+
 app.UseAuthentication();
 app.UseAuthorization();
 
