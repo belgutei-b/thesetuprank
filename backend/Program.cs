@@ -41,19 +41,19 @@ builder.Services.AddAuthentication(o =>
     {
         try
         {
-            Console.WriteLine("[OAuth] OnTicketReceived START");
+            Console.Error.WriteLine("[OAuth] OnTicketReceived START");
 
             var claims = ctx.Principal?.Claims ?? [];
             var email = claims.FirstOrDefault(c => c.Type == ClaimTypes.Email)?.Value ?? "";
             var name = claims.FirstOrDefault(c => c.Type == ClaimTypes.Name)?.Value ?? "";
             var imageUrl = claims.FirstOrDefault(c => c.Type == "picture")?.Value ?? "";
-            Console.WriteLine($"[OAuth] claims parsed email={email} name={name}");
+            Console.Error.WriteLine($"[OAuth] claims parsed email={email} name={name}");
 
             // create user if first time signing in
             var db = ctx.HttpContext.RequestServices.GetRequiredService<AppDbContext>();
-            Console.WriteLine("[OAuth] querying user");
+            Console.Error.WriteLine("[OAuth] querying user");
             var user = await db.Users.FirstOrDefaultAsync(u => u.Email == email);
-            Console.WriteLine($"[OAuth] user lookup done, exists={user != null}");
+            Console.Error.WriteLine($"[OAuth] user lookup done, exists={user != null}");
             if (user == null)
             {
                 user = new backend.Models.User
@@ -66,7 +66,7 @@ builder.Services.AddAuthentication(o =>
                 };
                 db.Users.Add(user);
                 await db.SaveChangesAsync();
-                Console.WriteLine($"[OAuth] new user created id={user.Id}");
+                Console.Error.WriteLine($"[OAuth] new user created id={user.Id}");
             }
 
 
@@ -77,7 +77,7 @@ builder.Services.AddAuthentication(o =>
                 expires: DateTime.UtcNow.AddDays(7),
                 signingCredentials: new SigningCredentials(signingKey, SecurityAlgorithms.HmacSha256)
             ));
-            Console.WriteLine("[OAuth] jwt issued");
+            Console.Error.WriteLine("[OAuth] jwt issued");
 
             // in production
             // Secure = true
@@ -93,14 +93,14 @@ builder.Services.AddAuthentication(o =>
 
             // since front-end and backend is in the same origin, "/" works
             var frontendUrl = builder.Configuration["App:FrontendUrl"] ?? "/";
-            Console.WriteLine($"[OAuth] redirecting to {frontendUrl}");
+            Console.Error.WriteLine($"[OAuth] redirecting to {frontendUrl}");
             ctx.Response.Redirect(frontendUrl);
             ctx.HandleResponse();
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[OAuth] EXCEPTION {ex.GetType().Name}: {ex.Message}");
-            Console.WriteLine(ex.ToString());
+            Console.Error.WriteLine($"[OAuth] EXCEPTION {ex.GetType().Name}: {ex.Message}");
+            Console.Error.WriteLine(ex.ToString());
             throw;
         }
     };

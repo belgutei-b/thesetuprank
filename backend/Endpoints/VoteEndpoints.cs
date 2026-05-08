@@ -15,6 +15,7 @@ public static class VoteEndpoints
         {
             try
             {
+                Console.Error.WriteLine("[Vote] GET /api/vote hit");
                 var userId = ctx.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
                 Guid? voterId = Guid.TryParse(userId, out var parsed) ? parsed : null;
 
