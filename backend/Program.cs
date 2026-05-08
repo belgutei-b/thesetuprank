@@ -172,6 +172,23 @@ builder.Services.Configure<ForwardedHeadersOptions>(options =>
 
 var app = builder.Build();
 
+// Pipeline tap: log every request & any exception bubbling up.
+app.Use(async (ctx, next) =>
+{
+    Console.Error.WriteLine($"[Pipeline] -> {ctx.Request.Method} {ctx.Request.Path}{ctx.Request.QueryString}");
+    try
+    {
+        await next();
+        Console.Error.WriteLine($"[Pipeline] <- {ctx.Request.Method} {ctx.Request.Path} status={ctx.Response.StatusCode}");
+    }
+    catch (Exception ex)
+    {
+        Console.Error.WriteLine($"[Pipeline] !! UNHANDLED {ex.GetType().Name}: {ex.Message}");
+        Console.Error.WriteLine(ex.ToString());
+        throw;
+    }
+});
+
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
