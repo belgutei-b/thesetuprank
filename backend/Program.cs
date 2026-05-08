@@ -33,6 +33,7 @@ builder.Services.AddAuthentication(o =>
     // todo: maybe handle if Google:ClientId doens't exist
     o.ClientId = builder.Configuration["Authentication:Google:ClientId"]!;
     o.ClientSecret = builder.Configuration["Authentication:Google:ClientSecret"]!;
+    o.CallbackPath = "/api/signin-google";
 
     // after google redirects back
     // OnTicketReceived fires
