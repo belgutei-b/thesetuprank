@@ -1,0 +1,14 @@
+services:
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: thesetuprank-sqlserver
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: "Your_strong_password123"
+    ports:
+      - "127.0.0.1:1433:1433"
+    volumes:
+      - thesetuprank-sqlserver-data:/var/opt/mssql
+
+volumes:
+  thesetuprank-sqlserver-data:

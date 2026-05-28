@@ -1,5 +1,6 @@
 using System;
 using System.Security.Claims;
+using backend.Auth;
 using backend.Data;
 
 namespace backend.Endpoints;
@@ -31,11 +32,11 @@ public static class AuthEndpoints
             }
         });
 
-        app.MapPost("/api/auth/logout", (HttpContext ctx) =>
+        app.MapPost("/api/auth/logout", (HttpContext ctx, AppAuthService auth) =>
         {
             try
             {
-                ctx.Response.Cookies.Delete("auth_token");
+                auth.DeleteAuthCookie(ctx.Response);
                 return Results.Ok();
             }
             catch (Exception ex)

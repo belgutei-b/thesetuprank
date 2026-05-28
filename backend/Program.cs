@@ -1,6 +1,7 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
+using backend.Auth;
 using backend.Data;
 using backend.Endpoints;
 using Microsoft.AspNetCore.Authentication;
@@ -23,7 +24,7 @@ if (builder.Environment.IsProduction())
     keysDir.Create();
     builder.Services.AddDataProtection()
         .PersistKeysToFileSystem(keysDir)
-        .SetApplicationName("setuprank-backend");
+        .SetApplicationName("thesetuprank-backend");
 }
 
 var jwtKey = builder.Configuration["Jwt:Key"]
@@ -33,6 +34,8 @@ var signingKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey));
 builder.Services.AddDbContext<AppDbContext>(options => options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"),
     sqlOptions => sqlOptions.EnableRetryOnFailure()
 ));
+
+builder.Services.AddScoped<AppAuthService>();
 
 builder.Services.AddAuthentication(o =>
 {
@@ -46,6 +49,11 @@ builder.Services.AddAuthentication(o =>
     o.ClientId = builder.Configuration["Authentication:Google:ClientId"]!;
     o.ClientSecret = builder.Configuration["Authentication:Google:ClientSecret"]!;
     o.CallbackPath = "/api/signin-google";
+ 
+    o.Scope.Add("profile");
+    o.Scope.Add("email");
+    o.ClaimActions.MapJsonKey("urn:google:picture", "picture");
+    o.ClaimActions.MapJsonKey("urn:google:email_verified", "email_verified");
 
     o.Events.OnRemoteFailure = ctx =>
     {
@@ -60,74 +68,10 @@ builder.Services.AddAuthentication(o =>
         return Task.CompletedTask;
     };
 
-    // after google redirects back
-    // OnTicketReceived fires
     o.Events.OnTicketReceived = async ctx =>
     {
-        try
-        {
-            Console.Error.WriteLine("[OAuth] OnTicketReceived START");
-
-            var claims = ctx.Principal?.Claims ?? [];
-            var email = claims.FirstOrDefault(c => c.Type == ClaimTypes.Email)?.Value ?? "";
-            var name = claims.FirstOrDefault(c => c.Type == ClaimTypes.Name)?.Value ?? "";
-            var imageUrl = claims.FirstOrDefault(c => c.Type == "picture")?.Value ?? "";
-            Console.Error.WriteLine($"[OAuth] claims parsed email={email} name={name}");
-
-            // create user if first time signing in
-            var db = ctx.HttpContext.RequestServices.GetRequiredService<AppDbContext>();
-            Console.Error.WriteLine("[OAuth] querying user");
-            var user = await db.Users.FirstOrDefaultAsync(u => u.Email == email);
-            Console.Error.WriteLine($"[OAuth] user lookup done, exists={user != null}");
-            if (user == null)
-            {
-                user = new backend.Models.User
-                {
-                    Email = email,
-                    Name = name,
-                    IsActive = true,
-                    ImageUrl = imageUrl,
-                    Handle = name,
-                };
-                db.Users.Add(user);
-                await db.SaveChangesAsync();
-                Console.Error.WriteLine($"[OAuth] new user created id={user.Id}");
-            }
-
-
-            var jwt = new JwtSecurityTokenHandler().WriteToken(new JwtSecurityToken(
-                issuer: "rate-setup",
-                audience: "rate-setup",
-                claims: [new Claim(ClaimTypes.Email, email), new Claim(ClaimTypes.Name, name), new Claim(ClaimTypes.NameIdentifier, user.Id.ToString())],
-                expires: DateTime.UtcNow.AddDays(7),
-                signingCredentials: new SigningCredentials(signingKey, SecurityAlgorithms.HmacSha256)
-            ));
-            Console.Error.WriteLine("[OAuth] jwt issued");
-
-            // in production
-            // Secure = true
-            bool isCookieSecure = builder.Environment.IsProduction();
-
-            ctx.Response.Cookies.Append("auth_token", jwt, new CookieOptions
-            {
-                HttpOnly = true, // client side js can't access it
-                SameSite = SameSiteMode.Lax,
-                Secure = isCookieSecure, // over https only
-                Expires = DateTimeOffset.UtcNow.AddDays(7),
-            });
-
-            // since front-end and backend is in the same origin, "/" works
-            var frontendUrl = builder.Configuration["App:FrontendUrl"] ?? "/";
-            Console.Error.WriteLine($"[OAuth] redirecting to {frontendUrl}");
-            ctx.Response.Redirect(frontendUrl);
-            ctx.HandleResponse();
-        }
-        catch (Exception ex)
-        {
-            Console.Error.WriteLine($"[OAuth] EXCEPTION {ex.GetType().Name}: {ex.Message}");
-            Console.Error.WriteLine(ex.ToString());
-            throw;
-        }
+        var auth = ctx.HttpContext.RequestServices.GetRequiredService<AppAuthService>();
+        await auth.HandleGoogleTicketReceivedAsync(ctx);
     };
 })
 .AddJwtBearer(o =>
@@ -144,9 +88,9 @@ builder.Services.AddAuthentication(o =>
     o.TokenValidationParameters = new TokenValidationParameters
     {
         ValidateIssuer = true,
-        ValidIssuer = "rate-setup",
+        ValidIssuer = "thesetuprank",
         ValidateAudience = true,
-        ValidAudience = "rate-setup",
+        ValidAudience = "thesetuprank",
         ValidateIssuerSigningKey = true,
         IssuerSigningKey = signingKey,
         ValidateLifetime = true,
@@ -201,6 +145,7 @@ app.Use(async (ctx, next) =>
     }
 });
 
+// Apply pending database migrations
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();

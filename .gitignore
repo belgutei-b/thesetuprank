@@ -17,3 +17,5 @@ backend/appsettings.Development.json
 
 # OS
 .DS_Store
+
+.idea/
