@@ -7,6 +7,15 @@ using Microsoft.EntityFrameworkCore;
 
 namespace backend.Endpoints;
 
+/***
+ * BLOG Storage todos
+ * 1. Tighten CORS for azure storage account
+ * 2. Disable: BLOB anonymous access
+ *      - all upload and retrieval will go through the backend in the future
+ * 3. Add upload image size limit
+ * 4. create DEV container in storage account (use different containers for prod and dev)
+ * 5. validate blob url
+ */
 public static class SetupEndpoints
 {
     private const int MaxNameLength = 40;
@@ -84,10 +93,10 @@ public static class SetupEndpoints
             try
             {
                 // check imageUrl
-                if (!setupPostDto.ImageUrl.StartsWith("https://setupimages.blob.core.windows.net/setupcontainer/"))
-                {
-                    throw new Exception("Invalid image url");
-                }
+                // if (!setupPostDto.ImageUrl.StartsWith("https://setupimages.blob.core.windows.net/setupcontainer/"))
+                // {
+                //     throw new Exception("Invalid image url");
+                // }
 
                 // check length of the name (40 chars) & description(400 chars)
 
@@ -141,6 +150,9 @@ public static class SetupEndpoints
             {
                 var connectionString = config["Azure:BlobConnectionString"];
                 var containerName = config["Azure:ContainerName"];
+                
+                if (string.IsNullOrWhiteSpace(connectionString)) { throw new InvalidOperationException("Connection string missin"); }
+                if (string.IsNullOrWhiteSpace(containerName)) { throw new InvalidOperationException("Container Name Missing"); }
 
                 var blobServiceClient = new BlobServiceClient(connectionString);
                 var containerClient = blobServiceClient.GetBlobContainerClient(containerName);
