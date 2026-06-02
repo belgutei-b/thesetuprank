@@ -1,5 +1,9 @@
 # Backend
 
+This is the ASP.NET Core Web API for The Setup Rank. The production backend is
+hosted on Azure App Service and is reached by the browser through a Cloudflare
+Pages `/api/*` proxy.
+
 ## Local SQL Server
 
 This backend uses SQL Server through Entity Framework Core.
@@ -34,7 +38,8 @@ If you change `MSSQL_SA_PASSWORD` in `sql-docker-compose.yml`, update the user-s
 
 Run database migrations:
 
-Currently, when the backend starts, it applies the pending EF core migrations autmoatically.
+Currently, when the backend starts, it applies pending EF Core migrations
+automatically.
 
 
 To manually apply database migrations:
@@ -43,7 +48,42 @@ To manually apply database migrations:
 dotnet ef database update
 ```
 
-### Deployment
+## Production Deployment
 
-Backend is deployend on Azure App Services with
-B1 service plan (1 Core, 1.75GB RAM, 10GB Storage).
+### Services
+
+The production deployment uses:
+
+```txt
+Frontend:       Cloudflare Pages
+API proxy:      Cloudflare Pages Function at /api/*
+Backend:        Azure App Service, Basic B1 plan
+Database:       Azure SQL Database, free tier
+Image storage:  Azure Blob Storage
+Auth provider:  Google OAuth
+Domain/DNS:     Cloudflare
+```
+
+The public domains are:
+
+```txt
+Frontend:        https://thesetuprank.com
+Browser API URL: https://thesetuprank.com/api/*
+Backend origin:  https://api.thesetuprank.com
+```
+
+The browser should normally call `/api/*` on `thesetuprank.com`. Cloudflare then
+proxies those requests to the Azure App Service custom domain.
+
+### Request Flow
+
+Normal API requests:
+
+```txt
+Browser
+  -> https://thesetuprank.com/api/*
+  -> Cloudflare Pages Function
+  -> https://api.thesetuprank.com/api/*
+  -> Azure App Service
+  -> Azure SQL Database / Azure Blob Storage
+```

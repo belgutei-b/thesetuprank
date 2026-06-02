@@ -136,8 +136,7 @@ public sealed class AppAuthService(
         response.Cookies.Append("auth_token", jwt, new CookieOptions
         {
             HttpOnly = true, // browser js can't read the value
-            // TODO: change it to true in production
-            Secure = false, // is https only
+            Secure = environment.IsProduction(), // is https only
             SameSite = SameSiteMode.Lax,
             Expires = DateTime.UtcNow.AddDays(7),
             Path = "/"
