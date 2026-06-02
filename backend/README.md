@@ -43,3 +43,7 @@ To manually apply database migrations:
 dotnet ef database update
 ```
 
+### Deployment
+
+Backend is deployend on Azure App Services with
+B1 service plan (1 Core, 1.75GB RAM, 10GB Storage).
