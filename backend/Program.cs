@@ -28,74 +28,80 @@ if (builder.Environment.IsProduction())
 }
 
 var jwtKey = builder.Configuration["Jwt:Key"]
-    ?? throw new InvalidOperationException("Jwt:Key is not configured");
+             ?? throw new InvalidOperationException("Jwt:Key is not configured");
 var signingKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey));
 
-builder.Services.AddDbContext<AppDbContext>(options => options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"),
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+if (string.IsNullOrWhiteSpace(connectionString))
+{
+    throw new InvalidOperationException("Database connection string DefaultConnection is missing.");
+}
+
+builder.Services.AddDbContext<AppDbContext>(options => options.UseSqlServer(connectionString,
     sqlOptions => sqlOptions.EnableRetryOnFailure()
 ));
 
 builder.Services.AddScoped<AppAuthService>();
 
 builder.Services.AddAuthentication(o =>
-{
-    o.DefaultScheme = CookieAuthenticationDefaults.AuthenticationScheme;
-    o.DefaultChallengeScheme = GoogleDefaults.AuthenticationScheme;
-})
-.AddCookie()
-.AddGoogle(o =>
-{
-    // todo: maybe handle if Google:ClientId doens't exist
-    o.ClientId = builder.Configuration["Authentication:Google:ClientId"]!;
-    o.ClientSecret = builder.Configuration["Authentication:Google:ClientSecret"]!;
-    o.CallbackPath = "/api/signin-google";
- 
-    o.Scope.Add("profile");
-    o.Scope.Add("email");
-    o.ClaimActions.MapJsonKey("urn:google:picture", "picture");
-    o.ClaimActions.MapJsonKey("urn:google:email_verified", "email_verified");
+    {
+        o.DefaultScheme = CookieAuthenticationDefaults.AuthenticationScheme;
+        o.DefaultChallengeScheme = GoogleDefaults.AuthenticationScheme;
+    })
+    .AddCookie()
+    .AddGoogle(o =>
+    {
+        // todo: maybe handle if Google:ClientId doens't exist
+        o.ClientId = builder.Configuration["Authentication:Google:ClientId"]!;
+        o.ClientSecret = builder.Configuration["Authentication:Google:ClientSecret"]!;
+        o.CallbackPath = "/api/signin-google";
 
-    o.Events.OnRemoteFailure = ctx =>
-    {
-        Console.Error.WriteLine($"[OAuth] OnRemoteFailure: {ctx.Failure?.GetType().Name}: {ctx.Failure?.Message}");
-        Console.Error.WriteLine(ctx.Failure?.ToString());
-        return Task.CompletedTask;
-    };
+        o.Scope.Add("profile");
+        o.Scope.Add("email");
+        o.ClaimActions.MapJsonKey("urn:google:picture", "picture");
+        o.ClaimActions.MapJsonKey("urn:google:email_verified", "email_verified");
 
-    o.Events.OnAccessDenied = ctx =>
-    {
-        Console.Error.WriteLine("[OAuth] OnAccessDenied");
-        return Task.CompletedTask;
-    };
-
-    o.Events.OnTicketReceived = async ctx =>
-    {
-        var auth = ctx.HttpContext.RequestServices.GetRequiredService<AppAuthService>();
-        await auth.HandleGoogleTicketReceivedAsync(ctx);
-    };
-})
-.AddJwtBearer(o =>
-{
-    o.Events = new JwtBearerEvents
-    {
-        OnMessageReceived = ctx =>
+        o.Events.OnRemoteFailure = ctx =>
         {
-            ctx.Token = ctx.Request.Cookies["auth_token"];
+            Console.Error.WriteLine($"[OAuth] OnRemoteFailure: {ctx.Failure?.GetType().Name}: {ctx.Failure?.Message}");
+            Console.Error.WriteLine(ctx.Failure?.ToString());
             return Task.CompletedTask;
-        }
-    };
-    // handles every subsequent API request after google login
-    o.TokenValidationParameters = new TokenValidationParameters
+        };
+
+        o.Events.OnAccessDenied = ctx =>
+        {
+            Console.Error.WriteLine("[OAuth] OnAccessDenied");
+            return Task.CompletedTask;
+        };
+
+        o.Events.OnTicketReceived = async ctx =>
+        {
+            var auth = ctx.HttpContext.RequestServices.GetRequiredService<AppAuthService>();
+            await auth.HandleGoogleTicketReceivedAsync(ctx);
+        };
+    })
+    .AddJwtBearer(o =>
     {
-        ValidateIssuer = true,
-        ValidIssuer = "thesetuprank",
-        ValidateAudience = true,
-        ValidAudience = "thesetuprank",
-        ValidateIssuerSigningKey = true,
-        IssuerSigningKey = signingKey,
-        ValidateLifetime = true,
-    };
-});
+        o.Events = new JwtBearerEvents
+        {
+            OnMessageReceived = ctx =>
+            {
+                ctx.Token = ctx.Request.Cookies["auth_token"];
+                return Task.CompletedTask;
+            }
+        };
+        // handles every subsequent API request after google login
+        o.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidIssuer = "thesetuprank",
+            ValidateAudience = true,
+            ValidAudience = "thesetuprank",
+            ValidateIssuerSigningKey = true,
+            IssuerSigningKey = signingKey,
+            ValidateLifetime = true,
+        };
+    });
 
 // all endpoints require auth by default
 builder.Services.AddAuthorization(options =>
@@ -121,7 +127,8 @@ if (builder.Environment.IsDevelopment())
 
 builder.Services.Configure<ForwardedHeadersOptions>(options =>
 {
-    options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto | ForwardedHeaders.XForwardedHost;
+    options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto |
+                               ForwardedHeaders.XForwardedHost;
     options.KnownIPNetworks.Clear();
     options.KnownProxies.Clear();
 });
@@ -135,7 +142,8 @@ app.Use(async (ctx, next) =>
     try
     {
         await next();
-        Console.Error.WriteLine($"[Pipeline] <- {ctx.Request.Method} {ctx.Request.Path} status={ctx.Response.StatusCode}");
+        Console.Error.WriteLine(
+            $"[Pipeline] <- {ctx.Request.Method} {ctx.Request.Path} status={ctx.Response.StatusCode}");
     }
     catch (Exception ex)
     {
@@ -154,10 +162,7 @@ using (var scope = app.Services.CreateScope())
 
 
 // Swagger UI pointing to your YAML
-app.UseSwaggerUI(c =>
-{
-    c.SwaggerEndpoint("/openapi.yaml", "Rate Setup API");
-});
+app.UseSwaggerUI(c => { c.SwaggerEndpoint("/openapi.yaml", "Rate Setup API"); });
 
 // cors only in development
 if (app.Environment.IsDevelopment())
