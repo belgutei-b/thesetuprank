@@ -42,6 +42,6 @@ public static class AuthEndpoints
             {
                 return Results.Problem(ex.Message);
             }
-        });
+        }).AllowAnonymous();
     }
 }
