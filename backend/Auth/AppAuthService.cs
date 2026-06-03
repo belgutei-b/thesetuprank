@@ -146,7 +146,13 @@ public sealed class AppAuthService(
     public void DeleteAuthCookie(HttpResponse response)
     {
         // Delete the auth cookie using matching cookie options/path.
-        response.Cookies.Delete("auth_token");
+        response.Cookies.Delete("auth_token", new CookieOptions
+        {
+            Path = "/",
+            Secure = environment.IsProduction(),
+            SameSite = SameSiteMode.Lax,
+            HttpOnly = true
+        });
     }
 
     private string GetFrontendRedirectUrl()

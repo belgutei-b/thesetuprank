@@ -18,5 +18,9 @@ export const onRequest: PagesFunction<Env> = async (context) => {
 
   const proxiedRequest = new Request(backendUrl, context.request);
 
-  return fetch(proxiedRequest);
+  const response = await fetch(proxiedRequest, {
+    redirect: "manual",
+  });
+
+  return response;
 };
