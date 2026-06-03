@@ -146,7 +146,7 @@ public sealed class AppAuthService(
     public void DeleteAuthCookie(HttpResponse response)
     {
         // Delete the auth cookie using matching cookie options/path.
-        throw new NotImplementedException();
+        response.Cookies.Delete("auth_token");
     }
 
     private string GetFrontendRedirectUrl()

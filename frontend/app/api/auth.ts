@@ -16,6 +16,7 @@ export async function getMe() {
   return user;
 }
 
+// Removes the cookie from the browser
 export async function logout() {
   const res = await fetch("/api/auth/logout", {
     method: "POST",

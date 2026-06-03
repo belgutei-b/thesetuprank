@@ -7,10 +7,9 @@ namespace backend.Endpoints;
 
 public static class AuthEndpoints
 {
-
     public static void MapAuthEndpoints(this WebApplication app)
     {
-        app.MapGet("/api/auth/me", async (AppDbContext db, HttpContext ctx, ILogger<Program> logger) =>
+        app.MapGet("/api/auth/me", (AppDbContext db, HttpContext ctx, ILogger<Program> logger) =>
         {
             try
             {
