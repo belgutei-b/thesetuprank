@@ -26,7 +26,7 @@ export async function uploadImageToAzure(
 
 export async function createSetup(setup: {
   name: string;
-  imageUrl: string;
+  file: File;
   description: string;
 }): Promise<void> {
   const res = await fetch("/api/setups", {
@@ -53,7 +53,7 @@ export async function getRanking(): Promise<{
   return res.json();
 }
 
-export function deleteSetup() {}
+export function deleteSetup() { }
 
 export async function reportSetup(setupId: string): Promise<void> {
   const res = await fetch(`/api/setups/report/${setupId}`, {

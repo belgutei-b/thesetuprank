@@ -87,7 +87,6 @@ public static class SetupEndpoints
 
         // db is accessible in the api endpoints because (dependency injection)
         // it was registered in Program.cs by builder.Services.AddDbContext
-        // TODO: enforce 2 setups per week
         app.MapPost("/api/setups", async (AppDbContext db, HttpContext ctx, SetupPostDto setupPostDto, ILogger<Program> logger) =>
         {
             try
@@ -150,7 +149,7 @@ public static class SetupEndpoints
             {
                 var connectionString = config["Azure:BlobConnectionString"];
                 var containerName = config["Azure:ContainerName"];
-                
+
                 if (string.IsNullOrWhiteSpace(connectionString)) { throw new InvalidOperationException("Connection string missin"); }
                 if (string.IsNullOrWhiteSpace(containerName)) { throw new InvalidOperationException("Container Name Missing"); }
 

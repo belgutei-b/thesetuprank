@@ -64,12 +64,17 @@ export default function Submit() {
     setStatus("uploading");
 
     try {
-      const { uploadUrl, imageUrl } = await getUploadUrl();
-      await uploadImageToAzure(uploadUrl, imageFile);
+      // Directly Uploading to the blob using PresignedURL
+      // const { uploadUrl, imageUrl } = await getUploadUrl();
+      // uplaods the image
+      // await uploadImageToAzure(uploadUrl, imageFile);
+
+      // Sending image to the backend server
+      // creates the setup
       await createSetup({
         name,
         description,
-        imageUrl,
+        file: imageFile,
       });
       setStatus("success");
       toast.success("Successfully added");

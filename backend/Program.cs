@@ -13,6 +13,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.DataProtection;
+using Amazon.S3;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -37,7 +38,7 @@ if (string.IsNullOrWhiteSpace(connectionString))
     throw new InvalidOperationException("Database connection string DefaultConnection is missing.");
 }
 
-builder.Services.AddDbContext<AppDbContext>(options => options.UseSqlServer(connectionString,
+builder.Services.AddDbContext<AppDbContext>(options => options.UseMySQL(connectionString,
     sqlOptions => sqlOptions.EnableRetryOnFailure()
 ));
 
@@ -133,6 +134,9 @@ builder.Services.Configure<ForwardedHeadersOptions>(options =>
     options.KnownProxies.Clear();
 });
 
+builder.Services.AddDefaultAWSOptions(builder.Configuration.GetAWSOptions());
+builder.Services.AddAWSService<IAmazonS3>();
+
 var app = builder.Build();
 
 // Pipeline tap: log every request & any exception bubbling up.
@@ -207,5 +211,11 @@ app.MapAuthEndpoints();
 app.MapVoteEndpoints();
 app.MapRankingEndpoints();
 app.MapSavesEndpoints();
+
+// test endpoint to check the S3 connection
+if (app.Environment.IsDevelopment())
+{
+    app.MapDevEndpoints();
+}
 
 app.Run();
