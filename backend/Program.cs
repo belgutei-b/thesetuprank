@@ -4,6 +4,7 @@ using System.Text;
 using backend.Auth;
 using backend.Data;
 using backend.Endpoints;
+using backend.Services;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.Google;
@@ -136,6 +137,7 @@ builder.Services.Configure<ForwardedHeadersOptions>(options =>
 
 builder.Services.AddDefaultAWSOptions(builder.Configuration.GetAWSOptions());
 builder.Services.AddAWSService<IAmazonS3>();
+builder.Services.AddScoped<IImageStorageService, S3ImageStorageService>();
 
 var app = builder.Build();
 

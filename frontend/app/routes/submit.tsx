@@ -1,7 +1,7 @@
 import { useRef, useState } from "react";
 import { useNavigate } from "react-router";
 import { useAuth } from "~/context/AuthContext";
-import { createSetup, getUploadUrl, uploadImageToAzure } from "~/api/setup";
+import { createSetup } from "~/api/setup";
 import toast from "react-hot-toast";
 
 type Status = "idle" | "uploading" | "success" | "error";
@@ -64,11 +64,6 @@ export default function Submit() {
     setStatus("uploading");
 
     try {
-      // Directly Uploading to the blob using PresignedURL
-      // const { uploadUrl, imageUrl } = await getUploadUrl();
-      // uplaods the image
-      // await uploadImageToAzure(uploadUrl, imageFile);
-
       // Sending image to the backend server
       // creates the setup
       await createSetup({

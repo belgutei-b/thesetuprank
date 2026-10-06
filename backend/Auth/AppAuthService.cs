@@ -23,22 +23,22 @@ public sealed class AppAuthService(
         {
             throw new InvalidOperationException("Missing google's identity claims");
         }
-        
+
         // Step 2: find or create the local user by GoogleSubjectId, not email.
         var oauthUser = ReadGoogleUserInfo(principal);
-        
+
         // Step 3: update local display fields such as Email, Name, and ImageUrl.
         var dbUser = await FindUserByGoogleSubjectIdAsync(oauthUser.GoogleSubjectId)
                      ?? await CreateUserFromGoogleAsync(oauthUser);
 
         // Step 4: create this app's own JWT with the local user id as NameIdentifier.
         string jwtToken = CreateAppJwt(dbUser);
-        
+
         // Step 5: append the JWT as an HttpOnly Secure cookie.
         AppendAuthCookie(ctx.Response, jwtToken);
-        
+
         // Step 6: redirect the browser back to the frontend.
-        ctx.Response.Redirect(GetFrontendRedirectUrl()); 
+        ctx.Response.Redirect(GetFrontendRedirectUrl());
         ctx.HandleResponse();
     }
 
@@ -56,7 +56,7 @@ public sealed class AppAuthService(
         var name = principal.FindFirstValue(ClaimTypes.Name);
         var imageUrl = principal.FindFirstValue("urn:google:picture");
         var emailVerified = principal.FindFirstValue("urn:google:email_verified");
-        
+
         // Reject the login if GoogleSubjectId is missing.
         // Reject the login if email is missing or email_verified is false.
         if (email is null ||
@@ -66,12 +66,12 @@ public sealed class AppAuthService(
             throw new InvalidOperationException("Missing identity claims");
         }
 
-        GoogleOAuthUserInfo googleOAuthUserInfo = new (
+        GoogleOAuthUserInfo googleOAuthUserInfo = new(
             googleSubjectId,
             email,
             name,
             imageUrl);
-        
+
         return googleOAuthUserInfo;
     }
 
@@ -86,7 +86,7 @@ public sealed class AppAuthService(
     private async Task<User> CreateUserFromGoogleAsync(GoogleOAuthUserInfo googleUser)
     {
         // Create your own local User row.
-        
+
         var user = new User
         {
             GoogleSubjectId = googleUser.GoogleSubjectId,
@@ -105,7 +105,7 @@ public sealed class AppAuthService(
     private string CreateAppJwt(User user)
     {
         // Create a JWT
-        
+
         var jwtKey = configuration["Jwt:Key"] ?? throw new InvalidOperationException("Jwt:Key is missing");
         var signingKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey));
 
@@ -120,8 +120,8 @@ public sealed class AppAuthService(
             expires: DateTime.UtcNow.AddDays(7),
             signingCredentials: new SigningCredentials(signingKey, SecurityAlgorithms.HmacSha256)
         );
-        
-        return new JwtSecurityTokenHandler().WriteToken(token); 
+
+        return new JwtSecurityTokenHandler().WriteToken(token);
     }
 
     private void AppendAuthCookie(HttpResponse response, string jwt)

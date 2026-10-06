@@ -1,39 +1,20 @@
 import type { ApiSetupListItem } from "./types";
 
-export async function getUploadUrl(): Promise<{
-  uploadUrl: string;
-  imageUrl: string;
-}> {
-  const res = await fetch("/api/setups/upload-url", {
-    method: "POST",
-    credentials: "include",
-  });
-  if (!res.ok) throw new Error("Failed to get upload URL");
-  return res.json();
-}
-
-export async function uploadImageToAzure(
-  uploadUrl: string,
-  file: File,
-): Promise<void> {
-  const res = await fetch(uploadUrl, {
-    method: "PUT",
-    headers: { "x-ms-blob-type": "BlockBlob" },
-    body: file,
-  });
-  if (!res.ok) throw new Error("Failed to upload image");
-}
-
 export async function createSetup(setup: {
   name: string;
   file: File;
   description: string;
 }): Promise<void> {
+  const formData = new FormData();
+  formData.append('name', setup.name);
+  formData.append('description', setup.description);
+  formData.append('setupImage', setup.file);
+
   const res = await fetch("/api/setups", {
     method: "POST",
     credentials: "include",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(setup),
+    // headers: { "Content-Type": "application/json" },
+    body: formData,
   });
   if (!res.ok) throw new Error("Failed to create setup");
 }
