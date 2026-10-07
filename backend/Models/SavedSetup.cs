@@ -7,5 +7,5 @@ public class SavedSetup
     public required Guid SetupId { get; set; } // Required foreign key property
     public Setup Setup { get; set; } = null!; // Required reference navigation to principal
     public User User { get; set; } = null!;
-    public DateTime CreatedAt { get; set; } = DateTime.Now;
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 }

@@ -1,7 +1,7 @@
 import { useRef, useState } from "react";
 import { useNavigate } from "react-router";
 import { useAuth } from "~/context/AuthContext";
-import { createSetup, getUploadUrl, uploadImageToAzure } from "~/api/setup";
+import { createSetup } from "~/api/setup";
 import toast from "react-hot-toast";
 
 type Status = "idle" | "uploading" | "success" | "error";
@@ -9,10 +9,12 @@ type Status = "idle" | "uploading" | "success" | "error";
 const MAX_NAME_LENGTH = 40;
 const MAX_DESCRIPTION_LENGTH = 400;
 const MAX_FILE_SIZE_MB = 10;
+const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"]
 
 export default function Submit() {
   const navigate = useNavigate();
   const { user, isLoading } = useAuth();
+
   if (isLoading) {
     return <div>Loading...</div>;
   }
@@ -31,8 +33,8 @@ export default function Submit() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   function handleFileSelect(file: File) {
-    if (!file.type.startsWith("image/")) {
-      toast.error("Only image files are allowed.");
+    if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
+      toast.error("Only JPG, PNG or WebP images are allowed.");
       return;
     }
     if (file.size > MAX_FILE_SIZE_MB * 1024 * 1024) {
@@ -64,12 +66,12 @@ export default function Submit() {
     setStatus("uploading");
 
     try {
-      const { uploadUrl, imageUrl } = await getUploadUrl();
-      await uploadImageToAzure(uploadUrl, imageFile);
+      // Sending image to the backend server
+      // creates the setup
       await createSetup({
         name,
         description,
-        imageUrl,
+        file: imageFile,
       });
       setStatus("success");
       toast.success("Successfully added");
@@ -135,7 +137,7 @@ export default function Submit() {
       <input
         ref={fileInputRef}
         type="file"
-        accept="image/jpeg,image/png"
+        accept={ALLOWED_IMAGE_TYPES.join(",")}
         className="hidden"
         onChange={(e) => {
           const file = e.target.files?.[0];
