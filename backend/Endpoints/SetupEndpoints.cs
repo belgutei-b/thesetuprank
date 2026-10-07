@@ -91,7 +91,6 @@ public static class SetupEndpoints
         // 1. frontend calls POST /api/setups
         // 2. backend uploads the image to S3 bucket
         // 3. backend saves the entries to the db
-        // TODO: compress file and file type
         app.MapPost(
                 "/api/setups",
                 async (
@@ -118,7 +117,7 @@ public static class SetupEndpoints
                             (ctx.User.FindFirst(ClaimTypes.NameIdentifier)?.Value)
                             ?? throw new Exception("null userId");
 
-                        // upload the image to S3 Bucket / returns key
+                        // compress & upload the image to S3 Bucket
                         var imageKey = await imageStorage.UploadImageAsync(setupPostDto.SetupImage);
 
                         var newSetup = new backend.Models.Setup
@@ -141,6 +140,11 @@ public static class SetupEndpoints
                                 description = newSetup.Description,
                             }
                         );
+                    }
+                    catch (InvalidImageException ex)
+                    {
+                        // Returns 400
+                        return Results.BadRequest(ex.Message);
                     }
                     catch (Exception ex)
                     {
