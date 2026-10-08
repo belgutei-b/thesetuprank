@@ -136,7 +136,7 @@ public static class SetupEndpoints
                             new
                             {
                                 setupId = newSetup.Id,
-                                imageUrl = newSetup.ImageUrl,
+                                imageUrl = imageStorage.GetImageUrl(newSetup.ImageUrl),
                                 description = newSetup.Description,
                             }
                         );

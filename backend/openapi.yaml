@@ -1,0 +1,338 @@
+openapi: '3.1.1'
+info:
+  title: backend | v1
+  version: 1.0.0
+servers:
+  - url: http://localhost:5065/
+paths:
+  /api/setups:
+    get:
+      tags:
+        - backend
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SetupListResDto'
+    post:
+      tags:
+        - backend
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/SetupPostDto'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/SetupPostDto'
+        required: true
+      responses:
+        '200':
+          description: OK
+  '/api/setups/{setupId}':
+    get:
+      tags:
+        - backend
+      parameters:
+        - name: setupId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+  '/api/setups/report/{setupId}':
+    post:
+      tags:
+        - backend
+      parameters:
+        - name: setupId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+  /api/auth/me:
+    get:
+      tags:
+        - backend
+      responses:
+        '200':
+          description: OK
+  /api/auth/logout:
+    post:
+      tags:
+        - backend
+      responses:
+        '200':
+          description: OK
+  /api/vote:
+    get:
+      tags:
+        - backend
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VoteGetResDto'
+    post:
+      tags:
+        - backend
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VoteSubmitReqDto'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VoteSubmitResDto'
+  /api/vote/count:
+    get:
+      tags:
+        - backend
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VoteCountResDto'
+  /api/ranking:
+    get:
+      tags:
+        - backend
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RankingResDto'
+  '/api/saves/{setupId}':
+    post:
+      tags:
+        - backend
+      parameters:
+        - name: setupId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+    delete:
+      tags:
+        - backend
+      parameters:
+        - name: setupId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+  /api/saves:
+    get:
+      tags:
+        - backend
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SetupListResDto'
+components:
+  schemas:
+    IFormFile:
+      type: string
+      format: binary
+    RankingResDto:
+      required:
+        - numberOfSetups
+        - setups
+      type: object
+      properties:
+        numberOfSetups:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        setups:
+          type: array
+          items:
+            $ref: '#/components/schemas/SetupListResDto'
+    SetupBriefDto:
+      required:
+        - id
+        - name
+        - description
+        - imageUrl
+        - rating
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        description:
+          type: string
+        imageUrl:
+          type: string
+        rating:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+    SetupListResDto:
+      required:
+        - id
+        - imageUrl
+        - name
+        - description
+        - wins
+        - losses
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        imageUrl:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        rating:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        featuredAt:
+          type:
+            - 'null'
+            - string
+          format: date-time
+        createdAt:
+          type: string
+          format: date-time
+        wins:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        losses:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+    SetupPostDto:
+      required:
+        - name
+        - setupImage
+        - description
+      type: object
+      properties:
+        name:
+          type: string
+        setupImage:
+          $ref: '#/components/schemas/IFormFile'
+        description:
+          type: string
+    VoteCountResDto:
+      required:
+        - count
+      type: object
+      properties:
+        count:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+    VoteGetResDto:
+      required:
+        - battleId
+        - setupA
+        - setupB
+      type: object
+      properties:
+        battleId:
+          type: string
+          format: uuid
+        setupA:
+          $ref: '#/components/schemas/SetupBriefDto'
+        setupB:
+          $ref: '#/components/schemas/SetupBriefDto'
+        isSavedSetupA:
+          type: boolean
+        isSavedSetupB:
+          type: boolean
+    VoteSubmitReqDto:
+      required:
+        - battleId
+        - winnerId
+        - loserId
+      type: object
+      properties:
+        battleId:
+          type: string
+          format: uuid
+        winnerId:
+          type: string
+          format: uuid
+        loserId:
+          type: string
+          format: uuid
+    VoteSubmitResDto:
+      required:
+        - battleId
+        - winnerDiff
+        - loserDiff
+      type: object
+      properties:
+        battleId:
+          type: string
+          format: uuid
+        winnerDiff:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        loserDiff:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+tags:
+  - name: backend

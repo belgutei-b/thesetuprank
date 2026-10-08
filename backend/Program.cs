@@ -22,7 +22,7 @@ var builder = WebApplication.CreateBuilder(args);
 // correlation cookie survives container restarts.
 if (builder.Environment.IsProduction())
 {
-    var keysDir = new DirectoryInfo("/home/DataProtection-Keys");
+    var keysDir = new DirectoryInfo("/data/keys");
     keysDir.Create();
     builder
         .Services.AddDataProtection()
@@ -133,44 +133,22 @@ if (builder.Environment.IsDevelopment())
     });
 }
 
+// nginx on the same machine sets X-Forwarded-Proto, so the app knows the
+// original request was HTTPS (needed for the Google OAuth redirect_uri).
+// By default only loopback proxies (nginx) are trusted.
 builder.Services.Configure<ForwardedHeadersOptions>(options =>
 {
-    options.ForwardedHeaders =
-        ForwardedHeaders.XForwardedFor
-        | ForwardedHeaders.XForwardedProto
-        | ForwardedHeaders.XForwardedHost;
-    options.KnownIPNetworks.Clear();
-    options.KnownProxies.Clear();
+    options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
 });
 
 builder.Services.AddDefaultAWSOptions(builder.Configuration.GetAWSOptions());
 builder.Services.AddAWSService<IAmazonS3>();
 builder.Services.AddScoped<IImageStorageService, S3ImageStorageService>();
 
-var app = builder.Build();
+// OpenAPI document generated from the endpoints (served at /openapi/v1.json and /openapi/v1.yaml)
+builder.Services.AddOpenApi();
 
-// Pipeline tap: log every request & any exception bubbling up.
-app.Use(
-    async (ctx, next) =>
-    {
-        Console.Error.WriteLine(
-            $"[Pipeline] -> {ctx.Request.Method} {ctx.Request.Path}{ctx.Request.QueryString}"
-        );
-        try
-        {
-            await next();
-            Console.Error.WriteLine(
-                $"[Pipeline] <- {ctx.Request.Method} {ctx.Request.Path} status={ctx.Response.StatusCode}"
-            );
-        }
-        catch (Exception ex)
-        {
-            Console.Error.WriteLine($"[Pipeline] !! UNHANDLED {ex.GetType().Name}: {ex.Message}");
-            Console.Error.WriteLine(ex.ToString());
-            throw;
-        }
-    }
-);
+var app = builder.Build();
 
 // Apply pending database migrations
 using (var scope = app.Services.CreateScope())
@@ -179,10 +157,11 @@ using (var scope = app.Services.CreateScope())
     db.Database.Migrate();
 }
 
-// Swagger UI pointing to your YAML
+// Swagger UI for the generated OpenAPI document
+// http://localhost:5065/swagger/index.html
 app.UseSwaggerUI(c =>
 {
-    c.SwaggerEndpoint("/openapi.yaml", "Rate Setup API");
+    c.SwaggerEndpoint("/openapi/v1.json", "Rate Setup API");
 });
 
 // cors only in development
@@ -192,22 +171,6 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseForwardedHeaders();
-
-// In production, force Request.Host/Scheme to the public hostname so OAuth
-// redirect_uri is built correctly even if SWA doesn't forward X-Forwarded-Host.
-var publicHost = builder.Configuration["App:PublicHost"];
-if (!string.IsNullOrEmpty(publicHost))
-{
-    app.Use(
-        (ctx, next) =>
-        {
-            ctx.Request.Host = new HostString(publicHost);
-            ctx.Request.Scheme = "https";
-            return next();
-        }
-    );
-}
-
 app.UseAuthentication();
 app.UseAuthorization();
 
@@ -223,16 +186,10 @@ app.MapGet(
     )
     .AllowAnonymous();
 
-// http://localhost:5065/swagger/index.html
-app.MapGet(
-        "/openapi.yaml",
-        async context =>
-        {
-            context.Response.ContentType = "application/yaml";
-            await context.Response.SendFileAsync("wwwroot/openapi.yaml");
-        }
-    )
-    .AllowAnonymous();
+// Generated OpenAPI document. AllowAnonymous because the fallback policy
+// requires sign-in for every endpoint.
+app.MapOpenApi().AllowAnonymous();
+app.MapOpenApi("/openapi/{documentName}.yaml").AllowAnonymous();
 
 app.MapSetupEndpoints();
 app.MapAuthEndpoints();
