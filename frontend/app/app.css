@@ -1,4 +1,8 @@
 @import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@custom-variant dark (&:is(.dark *));
 
 @theme {
   --font-sans:
@@ -12,6 +16,12 @@
   --color-muted: #666;
   --color-accent: #7eb8f7;
   --color-gold: #d4a017;
+
+  --color-line: #222;
+  --color-line-strong: #333;
+  --color-dim: #a1a1aa;
+  --color-faint: #8a8a8a;
+  --color-danger: #f28b82;
 }
 
 html,
@@ -132,4 +142,68 @@ body {
 .gsi-material-button:not(:disabled):hover .gsi-material-button-state {
   background-color: #303030;
   opacity: 8%;
+}
+
+/* shadcn/ui theme (components in app/components/ui), set to the site's dark
+   palette above. The site already uses `accent` (blue) and `muted` (#666) for
+   its own colors, so shadcn's accent/muted aren't mapped: the generated
+   components use `secondary` for hover backgrounds instead */
+@theme inline {
+  --font-heading: var(--font-serif);
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+}
+
+:root {
+  --background: #0d0d0d;
+  --foreground: #e8e8e8;
+  --card: #161616;
+  --card-foreground: #e8e8e8;
+  --popover: #161616;
+  --popover-foreground: #e8e8e8;
+  --primary: #e8e8e8;
+  --primary-foreground: #0d0d0d;
+  --secondary: #1f1f1f;
+  --secondary-foreground: #e8e8e8;
+  --muted-foreground: #a1a1aa;
+  --destructive: #f28b82;
+  --border: #333;
+  --input: #333;
+  --ring: #7eb8f7;
+  /* rounded-sm stays about Tailwind's 4px; the site is sharp-cornered */
+  --radius: 0.4rem;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+  html {
+    @apply font-sans;
+  }
 }

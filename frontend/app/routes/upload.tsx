@@ -1,61 +1,39 @@
-import { useRef, useState } from "react";
-import { useNavigate } from "react-router";
+import { useState } from "react";
+import { Navigate, useNavigate } from "react-router";
 import { useAuth } from "~/context/AuthContext";
 import { createSetup } from "~/api/setup";
+import PhotoPicker from "~/components/setup/PhotoPicker";
+import { Button } from "~/components/ui/button";
 import toast from "react-hot-toast";
 
 type Status = "idle" | "uploading" | "success" | "error";
 
 const MAX_NAME_LENGTH = 40;
 const MAX_DESCRIPTION_LENGTH = 400;
-const MAX_FILE_SIZE_MB = 10;
-const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"]
 
-export default function Submit() {
+export default function Upload() {
   const navigate = useNavigate();
   const { user, isLoading } = useAuth();
+
+  // Hooks stay above the early returns below: React needs the same hooks,
+  // in the same order, on every render
+  const [files, setFiles] = useState<File[]>([]);
+  const [name, setName] = useState("");
+  const [description, setDescription] = useState("");
+  const [status, setStatus] = useState<Status>("idle");
 
   if (isLoading) {
     return <div>Loading...</div>;
   }
   if (!user) {
     // toast message
-    navigate("/sign-in");
-  }
-
-  const [imageFile, setImageFile] = useState<File | null>(null);
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
-  const [name, setName] = useState("");
-  const [description, setDescription] = useState("");
-  const [status, setStatus] = useState<Status>("idle");
-  const [isDragging, setIsDragging] = useState(false);
-
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
-  function handleFileSelect(file: File) {
-    if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
-      toast.error("Only JPG, PNG or WebP images are allowed.");
-      return;
-    }
-    if (file.size > MAX_FILE_SIZE_MB * 1024 * 1024) {
-      toast.error(`File must be under ${MAX_FILE_SIZE_MB}MB.`);
-      return;
-    }
-    setImageFile(file);
-    setImagePreview(URL.createObjectURL(file));
-  }
-
-  function handleDrop(e: React.DragEvent) {
-    e.preventDefault();
-    setIsDragging(false);
-    const file = e.dataTransfer.files[0];
-    if (file) handleFileSelect(file);
+    return <Navigate to="/sign-in" replace />;
   }
 
   async function handleSubmit(e: { preventDefault: () => void }) {
     e.preventDefault();
-    if (!imageFile) {
-      toast.error("Please select a photo.");
+    if (files.length === 0) {
+      toast.error("Please add at least one photo.");
       return;
     }
     if (!name.trim()) {
@@ -66,12 +44,12 @@ export default function Submit() {
     setStatus("uploading");
 
     try {
-      // Sending image to the backend server
+      // Sending the images to the backend server
       // creates the setup
       await createSetup({
         name,
         description,
-        file: imageFile,
+        files,
       });
       setStatus("success");
       toast.success("Successfully added");
@@ -82,12 +60,10 @@ export default function Submit() {
     }
   }
 
-  if (isLoading) return null;
-
   return (
     <form
       onSubmit={handleSubmit}
-      className="flex flex-col gap-6 px-12 max-w-xl mx-auto"
+      className="flex flex-col gap-6 px-4 sm:px-12 max-w-xl mx-auto"
     >
       <h2
         className="text-xs uppercase tracking-widest"
@@ -96,54 +72,7 @@ export default function Submit() {
         Add Setup
       </h2>
 
-      {/* Image upload zone */}
-      <div
-        onClick={() => fileInputRef.current?.click()}
-        onDragOver={(e) => {
-          e.preventDefault();
-          setIsDragging(true);
-        }}
-        onDragLeave={() => setIsDragging(false)}
-        onDrop={handleDrop}
-        className="flex flex-col items-center justify-center h-40 border border-dashed cursor-pointer transition-colors"
-        style={{
-          borderColor: isDragging ? "var(--color-accent)" : "#333",
-          backgroundColor: isDragging ? "#161616" : "transparent",
-        }}
-      >
-        {imagePreview ? (
-          <img
-            src={imagePreview}
-            alt="Preview"
-            className="h-full w-full object-cover"
-          />
-        ) : (
-          <>
-            <p
-              className="text-xs uppercase tracking-widest"
-              style={{ color: "var(--color-text)" }}
-            >
-              Drag & Drop or Click
-            </p>
-            <p
-              className="mt-1 text-xs uppercase tracking-widest"
-              style={{ color: "var(--color-muted)" }}
-            >
-              JPG, PNG · Max 10MB
-            </p>
-          </>
-        )}
-      </div>
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept={ALLOWED_IMAGE_TYPES.join(",")}
-        className="hidden"
-        onChange={(e) => {
-          const file = e.target.files?.[0];
-          if (file) handleFileSelect(file);
-        }}
-      />
+      <PhotoPicker onChange={setFiles} />
 
       {/* Setup name */}
       <div className="flex flex-col gap-1">
@@ -207,17 +136,14 @@ export default function Submit() {
         />
       </div>
 
-      <button
+      <Button
         type="submit"
+        size="lg"
         disabled={status === "uploading"}
-        className="w-full py-3 text-xs uppercase tracking-widest transition-opacity disabled:opacity-50"
-        style={{
-          backgroundColor: "var(--color-text)",
-          color: "var(--color-bg)",
-        }}
+        className="w-full"
       >
-        {status === "uploading" ? "Uploading…" : "Submit Setup →"}
-      </button>
+        {status === "uploading" ? "Uploading…" : "Upload Setup →"}
+      </Button>
     </form>
   );
 }

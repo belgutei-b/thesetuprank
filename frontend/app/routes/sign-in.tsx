@@ -1,3 +1,5 @@
+import { Link } from "react-router";
+
 export default function SignIn() {
   return (
     <div className="flex flex-col items-center pt-10 px-6">
@@ -8,7 +10,7 @@ export default function SignIn() {
             Welcome
           </h1>
           <p className="text-[12px] tracking-[1.5px] uppercase text-muted font-sans">
-            Sign in to submit your setup & save setups you like
+            Sign in to upload your setup & save setups you like
           </p>
         </div>
 
@@ -59,8 +61,22 @@ export default function SignIn() {
         </button>
 
         {/* Footer note */}
-        <p className="text-[11px] text-muted font-sans text-center leading-relaxed">
-          By signing in you agree to our terms of service
+        <p className="text-[12px] text-faint font-sans text-center leading-relaxed">
+          By signing in you agree to our{" "}
+          <Link
+            to="/terms"
+            className="text-dim underline underline-offset-3 hover:text-text transition-colors"
+          >
+            Terms of Use
+          </Link>{" "}
+          and acknowledge our{" "}
+          <Link
+            to="/privacy"
+            className="text-dim underline underline-offset-3 hover:text-text transition-colors"
+          >
+            Privacy Policy
+          </Link>
+          .
         </p>
       </div>
     </div>
