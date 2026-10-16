@@ -28,7 +28,8 @@ public static class VoteEndpoints
 
                         // choosing 2 setups randomly
                         var setups = await db
-                            .Setups.Where(s => s.IsActive)
+                            .Setups.Include(s => s.Images)
+                            .Where(s => s.IsActive)
                             .OrderBy(s => EF.Functions.Random())
                             .Take(2)
                             .ToListAsync();
@@ -65,7 +66,10 @@ public static class VoteEndpoints
                             Id = setups[0].Id,
                             Name = setups[0].Name,
                             Description = setups[0].Description,
-                            ImageUrl = imageStorage.GetImageUrl(setups[0].ImageUrl),
+                            ImageKeys = setups[0]
+                                .Images.OrderBy(i => i.pos)
+                                .Select(i => imageStorage.GetImageUrl(i.Key))
+                                .ToArray(),
                             Rating = setups[0].Rating,
                         };
 
@@ -74,7 +78,10 @@ public static class VoteEndpoints
                             Id = setups[1].Id,
                             Name = setups[1].Name,
                             Description = setups[1].Description,
-                            ImageUrl = imageStorage.GetImageUrl(setups[1].ImageUrl),
+                            ImageKeys = setups[1]
+                                .Images.OrderBy(i => i.pos)
+                                .Select(i => imageStorage.GetImageUrl(i.Key))
+                                .ToArray(),
                             Rating = setups[1].Rating,
                         };
 

@@ -11,6 +11,7 @@ public static class SetupEndpoints
 {
     private const int MaxNameLength = 40;
     private const int MaxDescriptionLength = 400;
+    private const int MaxImageNumber = 4;
 
     public static void MapSetupEndpoints(this WebApplication app)
     {
@@ -32,7 +33,8 @@ public static class SetupEndpoints
                         var user = new Guid(userId);
 
                         var setups = await db
-                            .Setups.Where(s => s.IsActive)
+                            .Setups.Include(s => s.Images)
+                            .Where(s => s.IsActive)
                             .Where(u => u.CreatedBy.Equals(user))
                             .ToListAsync();
 
@@ -45,7 +47,10 @@ public static class SetupEndpoints
                                 new SetupListResDto
                                 {
                                     Id = setups[i].Id,
-                                    ImageUrl = imageStorage.GetImageUrl(setups[i].ImageUrl),
+                                    ImageKeys = setups[i]
+                                        .Images.OrderBy(img => img.pos)
+                                        .Select(img => imageStorage.GetImageUrl(img.Key))
+                                        .ToArray(),
                                     Name = setups[i].Name,
                                     Description = setups[i].Description,
                                     Rating = setups[i].Rating,
@@ -80,7 +85,7 @@ public static class SetupEndpoints
                     }
                     catch (Exception ex)
                     {
-                        logger.LogError(ex, "POST /api/setups/ FAILED");
+                        logger.LogError(ex, "GET /api/setups/ FAILED");
                         return Results.Problem("An unexpected error occurred.");
                     }
                 }
@@ -106,37 +111,51 @@ public static class SetupEndpoints
                         // check length of the name (40 chars) & description(400 chars)
                         if (setupPostDto.Name.Length > MaxNameLength)
                         {
-                            throw new Exception("Length of name exceeds 40 chars");
+                            throw new Exception($"Length of name exceeds {MaxNameLength} chars");
                         }
                         if (setupPostDto.Description.Length > MaxDescriptionLength)
                         {
-                            throw new Exception("Length of description exceeds 400 chars");
+                            throw new Exception(
+                                $"Length of description exceeds {MaxDescriptionLength} chars"
+                            );
+                        }
+                        // check the number of images
+                        if (setupPostDto.SetupImages.Count > MaxImageNumber)
+                        {
+                            throw new Exception($"Upload up to {MaxImageNumber} images per setup");
                         }
 
                         var userId =
                             (ctx.User.FindFirst(ClaimTypes.NameIdentifier)?.Value)
                             ?? throw new Exception("null userId");
 
-                        // compress & upload the image to S3 Bucket
-                        var imageKey = await imageStorage.UploadImageAsync(setupPostDto.SetupImage);
-
                         var newSetup = new backend.Models.Setup
                         {
                             CreatedBy = new Guid(userId),
-                            ImageUrl = imageKey,
                             Name = setupPostDto.Name,
                             Description = setupPostDto.Description,
                         };
 
-                        db.Setups.Add(newSetup);
+                        // compress & upload the images to S3 Bucket
+                        var i = 0;
+                        foreach (var setupImage in setupPostDto.SetupImages)
+                        {
+                            var imageKey = await imageStorage.UploadImageAsync(setupImage);
+                            var newImage = new backend.Models.Image { Key = imageKey, pos = i };
+                            newSetup.Images.Add(newImage);
+                            i++;
+                        }
 
+                        db.Setups.Add(newSetup);
                         await db.SaveChangesAsync();
 
                         return Results.Ok(
                             new
                             {
                                 setupId = newSetup.Id,
-                                imageUrl = imageStorage.GetImageUrl(newSetup.ImageUrl),
+                                imageKeys = newSetup
+                                    .Images.OrderBy(i => i.pos)
+                                    .Select(i => imageStorage.GetImageUrl(i.Key)),
                                 description = newSetup.Description,
                             }
                         );
@@ -175,7 +194,8 @@ public static class SetupEndpoints
 
                     var setup =
                         await db
-                            .Setups.Where(s => s.IsActive)
+                            .Setups.Include(s => s.Images)
+                            .Where(s => s.IsActive)
                             .Where(s => s.Id == setupId)
                             .Where(s => s.CreatedBy == user)
                             .SingleOrDefaultAsync()
@@ -184,11 +204,15 @@ public static class SetupEndpoints
                     var setupRet = new SetupListResDto
                     {
                         Id = setup.Id,
-                        ImageUrl = imageStorage.GetImageUrl(setup.ImageUrl),
+                        ImageKeys = setup
+                            .Images.OrderBy(i => i.pos)
+                            .Select(s => imageStorage.GetImageUrl(s.Key))
+                            .ToArray(),
                         Name = setup.Name,
                         Description = setup.Description,
                         FeaturedAt = setup.FeaturedAt,
                         CreatedAt = setup.CreatedAt,
+                        Rating = setup.Rating,
                         Wins = 0,
                         Losses = 0,
                     };

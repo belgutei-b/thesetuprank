@@ -7,7 +7,8 @@ public class Setup
 {
     public Guid Id { get; set; }
     public required Guid CreatedBy { get; set; }
-    public required string ImageUrl { get; set; }
+
+    // public required string ImageUrl { get; set; }
     public required string Name { get; set; }
     public required string Description { get; set; }
     public int Rating { get; set; } = 800;
@@ -17,4 +18,5 @@ public class Setup
     public int ReportCount { get; set; } = 0;
     public User User { get; set; } = null!;
     public ICollection<SavedSetup> SavedSetups { get; } = new List<SavedSetup>();
+    public ICollection<Image> Images { get; } = new List<Image>();
 }
