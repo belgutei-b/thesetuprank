@@ -5,7 +5,6 @@ import { postVote } from "~/api/vote";
 import { useAuth } from "~/context/AuthContext";
 import { Button } from "~/components/ui/button";
 import Kbd from "~/components/ui/Kbd";
-import { photosOf } from "~/lib/photos";
 import SetupColumn, { type CardState, type Side } from "./SetupColumn";
 
 type Props = {
@@ -110,7 +109,7 @@ export default function VotePair({ battle, onNext }: Props) {
         <SetupColumn
           side="A"
           setup={battle.setupA}
-          photos={photosOf(battle.setupA.imageUrl)}
+          photos={battle.setupA.imageKeys}
           state={stateOf("A")}
           ratingDiff={diffOf("A")}
           initialSaved={battle.isSavedSetupA}
@@ -137,7 +136,7 @@ export default function VotePair({ battle, onNext }: Props) {
         <SetupColumn
           side="B"
           setup={battle.setupB}
-          photos={photosOf(battle.setupB.imageUrl)}
+          photos={battle.setupB.imageKeys}
           state={stateOf("B")}
           ratingDiff={diffOf("B")}
           initialSaved={battle.isSavedSetupB}

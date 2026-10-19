@@ -1,6 +1,5 @@
 import { useState } from "react";
 import type { ApiSetupListItem } from "~/api/types";
-import { photosOf } from "~/lib/photos";
 import PhotoStage from "./PhotoStage";
 import PhotoViewer from "./PhotoViewer";
 
@@ -26,7 +25,7 @@ const rankColor = (i: number) =>
 export default function SetupRow({ setup, rank }: Props) {
   const [photoIndex, setPhotoIndex] = useState(0);
   const [isViewerOpen, setIsViewerOpen] = useState(false);
-  const photos = photosOf(setup.imageUrl);
+  const photos = setup.imageKeys;
   const rating = Number(setup.rating).toLocaleString();
 
   return (
