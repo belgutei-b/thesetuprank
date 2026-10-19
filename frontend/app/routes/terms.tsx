@@ -35,7 +35,10 @@ export default function Terms() {
       </LegalSection>
 
       <LegalSection title="What you can upload">
-        <p>Only upload setups that are yours. Every upload must:</p>
+        <p>
+          Only upload setups that are yours. You can add up to 4 photos per
+          setup, and every photo must:
+        </p>
         <ul>
           <li>be a photo you took of your own desk setup</li>
           <li>
@@ -52,14 +55,16 @@ export default function Terms() {
       <LegalSection title="Your photos stay yours">
         <p>
           You keep ownership of everything you upload. By uploading, you give
-          SetupRank a free, non-exclusive, worldwide licence to store, resize,
-          convert and display your photos, setup name and description on the
-          site: in battles, rankings and other parts of SetupRank. This licence
-          ends when your setup is removed.
+          SetupRank a free, non-exclusive, worldwide licence to store, crop,
+          resize, convert and display your photos, setup name and description
+          on the site: in battles, rankings and other parts of SetupRank. This
+          licence ends when your setup is removed.
         </p>
         <p>
-          When you upload, we resize and convert your photos and remove
-          embedded metadata, such as GPS location.
+          When you upload, we shrink large photos, convert them and remove
+          embedded metadata, such as GPS location. Your photos keep their
+          shape, but small previews on the site may show only the middle of a
+          photo.
         </p>
       </LegalSection>
 

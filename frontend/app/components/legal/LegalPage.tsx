@@ -3,7 +3,7 @@ import { Link } from "react-router";
 
 // TODO: make sure this inbox exists before deploying (e.g. Cloudflare Email Routing)
 export const CONTACT_EMAIL = "contact@thesetuprank.com";
-export const LAST_UPDATED = "9 October 2026";
+export const LAST_UPDATED = "19 October 2026";
 
 type Props = {
   title: string;

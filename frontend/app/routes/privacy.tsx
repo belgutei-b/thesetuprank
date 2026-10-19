@@ -32,9 +32,11 @@ export default function Privacy() {
             handle for your account. We never receive your Google password.
           </li>
           <li>
-            <strong>When you upload a setup:</strong> the photos, setup name and
-            description. Before storing photos we remove embedded metadata,
-            such as GPS location and camera details.
+            <strong>When you upload a setup:</strong> up to 4 photos, the setup
+            name and description. Our server shrinks large photos, converts
+            them and removes embedded metadata, such as GPS location and camera
+            details. We only store this processed copy, not your
+            original file.
           </li>
           <li>
             <strong>When you vote:</strong> which setup you picked in each
@@ -81,6 +83,10 @@ export default function Privacy() {
           public. Your email address, Google name and profile picture are not
           shown to other users.
         </p>
+        <p>
+          Photos are served from public links, so anyone who has a photo’s link
+          can open it.
+        </p>
       </LegalSection>
 
       <LegalSection title="Who else handles your data">
@@ -111,6 +117,13 @@ export default function Privacy() {
           exists. When you ask us to delete your account, we delete your
           account details, setups and photos, and your votes are kept only
           without any link to you. We don’t keep backups.
+        </p>
+        <p>
+          After a photo is deleted, cached copies can remain on CloudFront and
+          in browsers for a while. Setups removed for breaking the rules are
+          hidden from the site but may be kept. If an upload fails partway,
+          photos already processed can stay in storage, not shown anywhere and
+          not linked to your account.
         </p>
       </LegalSection>
 

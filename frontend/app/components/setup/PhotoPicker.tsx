@@ -147,14 +147,15 @@ export default function PhotoPicker({ onChange }: Props) {
                 key={photo.id}
                 className="relative aspect-square overflow-hidden rounded-xs bg-surface"
               >
-                {/* Square like the uploaded result: the server crops to 1:1.
+                {/* Whole photo, not cropped: the server keeps its shape, and
+                    the site shows it the same way (PhotoStage).
                     Not draggable, or dropping it on the picker would add it
                     again as a new file */}
                 <img
                   src={photo.previewUrl}
                   alt={`Photo ${i + 1}`}
                   draggable={false}
-                  className="h-full w-full object-cover"
+                  className="h-full w-full object-contain"
                 />
 
                 <span className="pointer-events-none absolute left-1.5 top-1.5 bg-black/75 px-1.5 py-0.5 text-[10px] uppercase tracking-[1.5px] text-text">

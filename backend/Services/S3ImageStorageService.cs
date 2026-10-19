@@ -18,7 +18,7 @@ public class S3ImageStorageService : IImageStorageService
 {
     private const long MaxUploadBytes = 10 * 1024 * 1024; // 10MB
     private const long MaxInputPixels = 50_000_000; // guards against decompression bombs
-    private const int OutputSize = 1080; // stored image is 1080x1080
+    private const int MaxSide = 1600; // longest side of the stored image
     private const int WebpQuality = 80;
     private const string ImageCacheControl = "public, max-age=31536000, immutable";
 
@@ -39,14 +39,14 @@ public class S3ImageStorageService : IImageStorageService
 
     public string GetImageUrl(string key) => $"{_cloudFrontBaseUrl}/{key}";
 
-    // Validates the upload, converts it to a square WebP, and stores it in S3.
+    // Validates the upload, converts it to WebP, and stores it in S3.
     // Returns the S3 key to save in the database.
     public async Task<string> UploadImageAsync(IFormFile file, CancellationToken ct = default)
     {
         // Checking the initial file type & size
         using var image = await LoadAndValidateAsync(file, ct);
         // Compress the image & make it WebP image
-        using var webp = await ToSquareWebpAsync(image, ct);
+        using var webp = await ToWebpAsync(image, ct);
 
         var key = $"images/{Guid.NewGuid()}.webp";
         var request = new PutObjectRequest
@@ -91,20 +91,23 @@ public class S3ImageStorageService : IImageStorageService
         }
     }
 
-    // Rotates phone photos upright, center-crops to a square,
-    // strips metadata (including GPS location), and encodes as WebP.
-    private static async Task<MemoryStream> ToSquareWebpAsync(Image image, CancellationToken ct)
+    // Rotates phone photos upright, shrinks them to fit MaxSide (keeping their
+    // shape), strips metadata (including GPS location), and encodes as WebP.
+    private static async Task<MemoryStream> ToWebpAsync(Image image, CancellationToken ct)
     {
         image.Mutate(x =>
-            x.AutoOrient()
-                .Resize(
+        {
+            x.AutoOrient();
+            // only shrink: smaller photos keep their size
+            if (image.Width > MaxSide || image.Height > MaxSide)
+                x.Resize(
                     new ResizeOptions
                     {
-                        Size = new Size(OutputSize, OutputSize),
-                        Mode = ResizeMode.Crop,
+                        Size = new Size(MaxSide, MaxSide),
+                        Mode = ResizeMode.Max, // fits inside MaxSide x MaxSide, keeps the aspect ratio
                     }
-                )
-        );
+                );
+        });
         image.Metadata.ExifProfile = null;
         image.Metadata.XmpProfile = null;
 
