@@ -1,39 +1,41 @@
 import { useEffect, useState } from "react";
+import toast from "react-hot-toast";
 import type { ApiVoteGet, ApiVoteResponse } from "~/api/types";
 import { postVote } from "~/api/vote";
 import { useAuth } from "~/context/AuthContext";
-import SetupCard from "./SetupCard";
-
-type VoteState = "idle" | "voted";
-type Winner = "A" | "B" | null;
+import { Button } from "~/components/ui/button";
+import Kbd from "~/components/ui/Kbd";
+import SetupColumn, { type CardState, type Side } from "./SetupColumn";
 
 type Props = {
   battle: ApiVoteGet;
   onNext: () => void;
 };
 
+// How long the vote result stays on screen before the next pairing loads
+const AUTO_ADVANCE_MS = 1000;
+
+function formatDiff(diff: number) {
+  return `${diff > 0 ? "+" : ""}${diff} pts`;
+}
+
+// Render with key={battle.battleId} so every new battle starts from a clean state
 export default function VotePair({ battle, onNext }: Props) {
   const { incrementVoteCount } = useAuth();
-  const [voteState, setVoteState] = useState<VoteState>("idle");
-  const [winner, setWinner] = useState<Winner>(null);
+  const [winner, setWinner] = useState<Side | null>(null);
   const [voteResponse, setVoteResponse] = useState<ApiVoteResponse | null>(
     null,
   );
 
-  useEffect(() => {
-    setVoteState("idle");
-    setWinner(null);
-    setVoteResponse(null);
-  }, [battle.battleId]);
+  const hasVoted = winner !== null;
 
-  async function handleVote(picked: "A" | "B") {
-    if (voteState !== "idle") return;
+  async function handleVote(picked: Side) {
+    if (winner) return;
 
     const winnerSetup = picked === "A" ? battle.setupA : battle.setupB;
     const loserSetup = picked === "A" ? battle.setupB : battle.setupA;
 
     setWinner(picked);
-    setVoteState("voted");
 
     try {
       const res = await postVote(
@@ -43,70 +45,156 @@ export default function VotePair({ battle, onNext }: Props) {
       );
       setVoteResponse(res);
       incrementVoteCount();
-      setTimeout(onNext, 1500);
     } catch {
-      setTimeout(onNext, 1500);
+      setWinner(null);
+      toast.error("Failed to submit your vote. Please try again.");
     }
   }
 
-  function handleSkip() {
-    onNext();
+  // Moves on by itself once the vote is in. If a dialog (full size view,
+  // report) is open by then, it stays put so nothing vanishes from under the
+  // user. Next still works
+  useEffect(() => {
+    if (!voteResponse) return;
+    const timer = setTimeout(() => {
+      if (document.querySelector("[role='dialog']")) return;
+      onNext();
+    }, AUTO_ADVANCE_MS);
+    return () => clearTimeout(timer);
+  }, [voteResponse]);
+
+  // ← / → pick a side, S skips (or moves on after voting)
+  useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.defaultPrevented || e.altKey || e.ctrlKey || e.metaKey) return;
+      const target = e.target as HTMLElement | null;
+      if (target?.closest("input, textarea, select, [contenteditable='true']"))
+        return;
+      // open menus and dialogs use the arrow keys themselves
+      if (document.querySelector("[role='dialog'], [role='menu']")) return;
+
+      if (e.key === "ArrowLeft") handleVote("A");
+      else if (e.key === "ArrowRight") handleVote("B");
+      else if (e.key === "s" || e.key === "S") onNext();
+    }
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  });
+
+  function stateOf(side: Side): CardState {
+    if (winner === null) return "idle";
+    return winner === side ? "winner" : "loser";
   }
 
-  const stateA =
-    voteState === "idle" ? "idle" : winner === "A" ? "winner" : "loser";
-  const stateB =
-    voteState === "idle" ? "idle" : winner === "B" ? "winner" : "loser";
+  function diffOf(side: Side) {
+    if (!voteResponse) return undefined;
+    return formatDiff(
+      winner === side ? voteResponse.winnerDiff : voteResponse.loserDiff,
+    );
+  }
 
-  const voted = voteState === "voted";
+  const pickedName =
+    winner === "A" ? battle.setupA.name : winner === "B" ? battle.setupB.name : "";
 
   return (
     <div>
-      {/* Instruction text */}
-      <p className="text-center text-[11px] tracking-[2.5px] uppercase font-sans mb-8 transition-colors duration-300 text-muted">
-        — Tap the superior setup —
+      <p className="mb-7 hidden px-6 text-center text-[11px] uppercase tracking-[2.5px] text-muted sm:block">
+        — {hasVoted ? `You picked ${pickedName}` : "Pick the superior setup"} —
       </p>
 
-      {/* Photo pair */}
-      <div className="flex gap-4 px-6">
-        <SetupCard
+      {/* One column on phones. From sm up: A | vs | B, with rows for header,
+          photo, thumbnails and description */}
+      <div className="mx-auto grid max-w-[1040px] grid-cols-1 gap-y-1.5 px-4 pt-3 pb-28 sm:grid-cols-[minmax(0,1fr)_40px_minmax(0,1fr)] sm:gap-x-5 sm:gap-y-3 sm:px-6 sm:pt-0 sm:pb-0">
+        <SetupColumn
+          side="A"
           setup={battle.setupA}
-          state={stateA}
-          ratingDiff={
-            voteResponse
-              ? stateA === "winner"
-                ? voteResponse.winnerDiff
-                : voteResponse.loserDiff
-              : undefined
-          }
-          onVote={() => handleVote("A")}
+          photos={battle.setupA.imageKeys}
+          state={stateOf("A")}
+          ratingDiff={diffOf("A")}
           initialSaved={battle.isSavedSetupA}
+          onPick={() => handleVote("A")}
+          onSkip={onNext}
         />
-        <SetupCard
+
+        <div aria-hidden="true" className="flex h-[26px] items-center gap-3 sm:hidden">
+          <span className="h-px flex-1 bg-line" />
+          <span className="font-serif text-sm italic text-dim">vs</span>
+          <span className="h-px flex-1 bg-line" />
+        </div>
+        <div
+          aria-hidden="true"
+          className="hidden w-px justify-self-center bg-line sm:col-start-2 sm:row-span-4 sm:row-start-1 sm:block"
+        />
+        <span
+          aria-hidden="true"
+          className="hidden size-10 place-items-center self-center justify-self-center rounded-full border border-line-strong bg-bg font-serif text-[15px] italic text-dim sm:col-start-2 sm:row-start-2 sm:grid"
+        >
+          vs
+        </span>
+
+        <SetupColumn
+          side="B"
           setup={battle.setupB}
-          state={stateB}
-          ratingDiff={
-            voteResponse
-              ? stateB === "winner"
-                ? voteResponse.winnerDiff
-                : voteResponse.loserDiff
-              : undefined
-          }
-          onVote={() => handleVote("B")}
+          photos={battle.setupB.imageKeys}
+          state={stateOf("B")}
+          ratingDiff={diffOf("B")}
           initialSaved={battle.isSavedSetupB}
+          onPick={() => handleVote("B")}
+          onSkip={onNext}
         />
       </div>
 
-      {/* Skip / Next */}
-      <div className="text-center mt-4 mb-5">
-        <button
-          onClick={handleSkip}
-          className={`text-[11px] tracking-[2px] uppercase bg-transparent border-0 cursor-pointer underline underline-offset-[3px] font-sans transition-colors duration-300 ${
-            voted ? "text-accent" : "text-muted"
-          }`}
+      {/* Tablet and desktop */}
+      <div className="mt-6 hidden text-center sm:block">
+        <Button
+          variant="link"
+          onClick={onNext}
+          className={hasVoted ? "text-accent" : undefined}
         >
-          {voted ? "Next Pairing →" : "Skip Pairing"}
-        </button>
+          {hasVoted ? "Next pairing →" : "Skip pairing"}
+        </Button>
+        <p className="mt-1.5 hidden items-center justify-center gap-x-4.5 text-xs text-muted lg:flex">
+          <span className="inline-flex items-center gap-1.5">
+            <Kbd>←</Kbd>
+            <Kbd>→</Kbd>
+            pick
+          </span>
+          <span className="inline-flex items-center gap-1.5">
+            <Kbd>S</Kbd>
+            {hasVoted ? "next" : "skip"}
+          </span>
+        </p>
+      </div>
+
+      {/* Phone: always within thumb reach */}
+      <div className="fixed inset-x-0 bottom-0 z-30 border-t border-line bg-bg px-4 pt-3 pb-[max(12px,env(safe-area-inset-bottom))] sm:hidden">
+        <div className="flex items-center gap-3">
+          <p className="min-w-0 flex-1 truncate text-[13px] text-dim">
+            {hasVoted ? (
+              <>
+                You picked <span className="text-text">{pickedName}</span>
+                {voteResponse && (
+                  <span className="tabular-nums text-accent">
+                    {" "}
+                    · {formatDiff(voteResponse.winnerDiff)}
+                  </span>
+                )}
+              </>
+            ) : (
+              "Tap the better setup"
+            )}
+          </p>
+          {hasVoted ? (
+            <Button size="lg" onClick={onNext}>
+              Next →
+            </Button>
+          ) : (
+            <Button variant="link" size="lg" onClick={onNext}>
+              Skip
+            </Button>
+          )}
+        </div>
       </div>
     </div>
   );

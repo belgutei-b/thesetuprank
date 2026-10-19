@@ -29,13 +29,17 @@ public static class RankingEndpoints
 
                         // fetch the top 20 setups based on the Ranking
                         var setups = await db
-                            .Setups.Where(s => s.IsActive == true)
+                            .Setups.Include(s => s.Images)
+                            .Where(s => s.IsActive == true)
                             .OrderByDescending(s => s.Rating)
                             .Take(20)
                             .Select(s => new SetupListResDto
                             {
                                 Id = s.Id,
-                                ImageUrl = imageStorage.GetImageUrl(s.ImageUrl),
+                                ImageKeys = s
+                                    .Images.OrderBy(img => img.pos)
+                                    .Select(i => imageStorage.GetImageUrl(i.Key))
+                                    .ToArray(),
                                 Name = s.Name,
                                 Description = s.Description,
                                 Rating = s.Rating,

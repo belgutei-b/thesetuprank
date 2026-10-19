@@ -16,7 +16,8 @@ export type User = Omit<ApiUser, "createdAt"> & {
 export type ApiSetup = {
   id: string;
   name: string;
-  imageUrl: string;
+  // full image URLs (1 to 4), in display order: the first one is the cover
+  imageKeys: string[];
   description: string;
   rating: number;
   createdAt: string;
@@ -32,7 +33,8 @@ export type ApiSetupBrief = Omit<ApiSetup, "createdAt" | "featuredAt">;
 
 export type ApiSetupListItem = {
   id: string;
-  imageUrl: string;
+  // full image URLs (1 to 4), in display order: the first one is the cover
+  imageKeys: string[];
   name: string;
   description: string;
   rating: number;

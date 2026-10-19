@@ -55,6 +55,29 @@ namespace backend.Migrations
                     b.ToTable("Battles");
                 });
 
+            modelBuilder.Entity("backend.Models.Image", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("char(36)");
+
+                    b.Property<string>("Key")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.Property<Guid>("SetupId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<int>("pos")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SetupId");
+
+                    b.ToTable("Images");
+                });
+
             modelBuilder.Entity("backend.Models.SavedSetup", b =>
                 {
                     b.Property<Guid>("Id")
@@ -98,10 +121,6 @@ namespace backend.Migrations
 
                     b.Property<DateTime?>("FeaturedAt")
                         .HasColumnType("datetime(6)");
-
-                    b.Property<string>("ImageUrl")
-                        .IsRequired()
-                        .HasColumnType("longtext");
 
                     b.Property<bool>("IsActive")
                         .HasColumnType("tinyint(1)");
@@ -182,6 +201,17 @@ namespace backend.Migrations
                     b.Navigation("Setup2");
                 });
 
+            modelBuilder.Entity("backend.Models.Image", b =>
+                {
+                    b.HasOne("backend.Models.Setup", "Setup")
+                        .WithMany("Images")
+                        .HasForeignKey("SetupId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Setup");
+                });
+
             modelBuilder.Entity("backend.Models.SavedSetup", b =>
                 {
                     b.HasOne("backend.Models.Setup", "Setup")
@@ -214,6 +244,8 @@ namespace backend.Migrations
 
             modelBuilder.Entity("backend.Models.Setup", b =>
                 {
+                    b.Navigation("Images");
+
                     b.Navigation("SavedSetups");
                 });
 

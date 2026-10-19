@@ -85,7 +85,6 @@ public static class SavesEndpoints
 
         // current authenticated users all saved setups
         // currently returns the first 20 setups
-        // TODO: need to add pagination to this endpoint
         app.MapGet(
                 "/api/saves",
                 async (
@@ -107,6 +106,7 @@ public static class SavesEndpoints
                             .OrderBy(s => s.CreatedAt)
                             .Take(20)
                             .Include(s => s.Setup)
+                            .Include(s => s.Setup.Images)
                             .ToListAsync();
 
                         var setupIds = savedSetups.Select(s => s.SetupId).ToList();
@@ -122,7 +122,10 @@ public static class SavesEndpoints
                             .Select(s => new SetupListResDto
                             {
                                 Id = s.Setup.Id,
-                                ImageUrl = imageStorage.GetImageUrl(s.Setup.ImageUrl),
+                                ImageKeys = s
+                                    .Setup.Images.OrderBy(img => img.pos)
+                                    .Select(i => imageStorage.GetImageUrl(i.Key))
+                                    .ToArray(),
                                 Name = s.Setup.Name,
                                 Description = s.Setup.Description,
                                 Rating = s.Setup.Rating,

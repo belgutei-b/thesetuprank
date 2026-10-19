@@ -2,13 +2,18 @@ import type { ApiSetupListItem } from "./types";
 
 export async function createSetup(setup: {
   name: string;
-  file: File;
+  // in display order: the first one is the cover
+  files: File[];
   description: string;
 }): Promise<void> {
   const formData = new FormData();
   formData.append('name', setup.name);
   formData.append('description', setup.description);
-  formData.append('setupImage', setup.file);
+  // one `setupImages` entry per file. The order is kept, so the backend can
+  // bind them to a List<IFormFile> SetupImages
+  for (const file of setup.files) {
+    formData.append('setupImages', file);
+  }
 
   const res = await fetch("/api/setups", {
     method: "POST",
@@ -36,9 +41,15 @@ export async function getRanking(): Promise<{
 
 export function deleteSetup() { }
 
-export async function reportSetup(setupId: string): Promise<void> {
+export async function reportSetup(
+  setupId: string,
+  message?: string,
+): Promise<void> {
   const res = await fetch(`/api/setups/report/${setupId}`, {
     method: "POST",
+    headers: { "Content-Type": "application/json" },
+    // TODO: the backend ignores the body for now and only counts reports
+    body: JSON.stringify({ message }),
   });
   if (!res.ok) throw new Error("Failed to report setup");
 }

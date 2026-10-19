@@ -27,7 +27,7 @@ export const links: Route.LinksFunction = () => [
 
 export function Layout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="en" className="dark">
       <head>
         <meta charSet="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -48,6 +48,8 @@ export default function App() {
     <AuthProvider>
       <Toaster
         position="bottom-right"
+        // keeps toasts above the vote page's pinned bar on phones
+        containerClassName="max-sm:bottom-24!"
         toastOptions={{
           style: {
             background: "#161616",
