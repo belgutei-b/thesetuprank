@@ -13,7 +13,7 @@ function getWeekOf() {
 }
 
 const menuItemClass =
-  "flex h-12 w-full cursor-pointer items-center border-t border-[#1c1c1c] text-xs uppercase tracking-widest";
+  "flex h-12 w-full cursor-pointer items-center border-t border-line text-xs uppercase tracking-widest";
 
 export function UtilityBar() {
   const { user, handleLogout, voteCount } = useAuth();
@@ -45,19 +45,19 @@ export function UtilityBar() {
             <>
               <Link
                 to="/profile"
-                className="hover:text-[var(--color-text)] transition-colors"
+                className="transition-colors hover:text-text"
               >
                 My Profile
               </Link>
               <Link
                 to="/upload"
-                className="hover:text-[var(--color-text)] transition-colors"
+                className="transition-colors hover:text-text"
               >
                 + Add Setup
               </Link>
               <button
                 onClick={handleLogout}
-                className="hover:text-[var(--color-text)] transition-colors cursor-pointer"
+                className="transition-colors hover:text-text cursor-pointer"
               >
                 Sign Out
               </button>
@@ -65,7 +65,7 @@ export function UtilityBar() {
           ) : (
             <Link
               to="/sign-in"
-              className="hover:text-[var(--color-text)] transition-colors"
+              className="transition-colors hover:text-text"
             >
               Sign In
             </Link>
@@ -130,6 +130,23 @@ export function UtilityBar() {
                 Sign In
               </Link>
             )}
+            {/* Legal links: on tablet and desktop they're in the footer */}
+            <div className="flex gap-6 border-t border-line">
+              <Link
+                to="/terms"
+                onClick={closeMenu}
+                className="flex h-12 items-center text-xs uppercase tracking-widest text-faint"
+              >
+                Terms
+              </Link>
+              <Link
+                to="/privacy"
+                onClick={closeMenu}
+                className="flex h-12 items-center text-xs uppercase tracking-widest text-faint"
+              >
+                Privacy
+              </Link>
+            </div>
           </nav>
         )}
       </div>
