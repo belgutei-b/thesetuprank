@@ -190,7 +190,7 @@ components:
         - id
         - name
         - description
-        - imageUrl
+        - imageKeys
         - rating
       type: object
       properties:
@@ -201,8 +201,10 @@ components:
           type: string
         description:
           type: string
-        imageUrl:
-          type: string
+        imageKeys:
+          type: array
+          items:
+            type: string
         rating:
           pattern: '^-?(?:0|[1-9]\d*)$'
           type:
@@ -212,7 +214,7 @@ components:
     SetupListResDto:
       required:
         - id
-        - imageUrl
+        - imageKeys
         - name
         - description
         - wins
@@ -222,8 +224,10 @@ components:
         id:
           type: string
           format: uuid
-        imageUrl:
-          type: string
+        imageKeys:
+          type: array
+          items:
+            type: string
         name:
           type: string
         description:
@@ -257,14 +261,16 @@ components:
     SetupPostDto:
       required:
         - name
-        - setupImage
+        - setupImages
         - description
       type: object
       properties:
         name:
           type: string
-        setupImage:
-          $ref: '#/components/schemas/IFormFile'
+        setupImages:
+          type: array
+          items:
+            $ref: '#/components/schemas/IFormFile'
         description:
           type: string
     VoteCountResDto:

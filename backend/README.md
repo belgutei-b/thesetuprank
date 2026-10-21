@@ -1,12 +1,8 @@
 # Backend
 
 This is the ASP.NET Core Web API for The Setup Rank. It uses Entity Framework
-Core with a MySQL database, Google OAuth for sign-in, and S3 for images.
-
-The project is being migrated from Azure to AWS on the `aws-migration` branch.
-This README describes the AWS setup. See [Migration Status](#migration-status)
-for what is done and what is left. Until the cutover, the live site still runs
-on Azure from `main`.
+Core with a MySQL database, Google OAuth for sign-in, and S3 + CloudFront for
+images. It runs on AWS at https://thesetuprank.com.
 
 ## Architecture
 
@@ -21,10 +17,10 @@ Browser
      nginx
        /api/*  -> Kestrel 127.0.0.1:5000 (ASP.NET Core)
                     -> MySQL 127.0.0.1:3306 (data on EBS volume /data)
-                    -> S3 (via IAM role)
+                    -> S3 (uploads, via IAM role)
        /*      -> /var/www/thesetuprank (React build)
 
-Images: browser loads them directly from S3 using presigned URLs
+Images: browser -> CloudFront -> private S3 bucket (Origin Access Control)
 ```
 
 ```txt
@@ -33,9 +29,9 @@ Server:           AWS EC2 t4g.micro (arm64), Amazon Linux 2023, ap-southeast-2
 Web server:       nginx (static frontend + reverse proxy)
 Backend:          ASP.NET Core (.NET 10), systemd service
 Database:         MySQL 8.4 on the same instance, data on a dedicated EBS volume
-Image storage:    AWS S3, private bucket, presigned URLs
+Image storage:    private S3 bucket, served through CloudFront
 Auth provider:    Google OAuth
-CI/CD:            GitHub Actions, deploys over SSH
+Deploys:          manual, deploy.sh on the server (no CI/CD)
 ```
 
 Frontend and API share one origin (`thesetuprank.com`), so the auth cookie works
@@ -54,7 +50,8 @@ without CORS or a separate proxy.
 ### File Layout
 
 ```txt
-/opt/thesetuprank/backend/      published backend (self-contained linux-arm64)
+~/rate-setup/                   git clone of the repo, used for building
+/opt/thesetuprank/backend/      published backend
 /var/www/thesetuprank/          frontend build (contents of frontend/build/client)
 /etc/thesetuprank/backend.env   production config and secrets (root only, chmod 600)
 /etc/ssl/cloudflare/            Cloudflare Origin CA certificate and key
@@ -65,7 +62,8 @@ without CORS or a separate proxy.
 
 ### Backend Service
 
-The backend runs as a systemd service under its own `thesetuprank` user.
+The backend runs as a systemd service under its own `thesetuprank` user, which
+can't log in and has no `sudo`.
 
 `/etc/systemd/system/thesetuprank-backend.service`:
 
@@ -73,11 +71,12 @@ The backend runs as a systemd service under its own `thesetuprank` user.
 [Unit]
 Description=The Setup Rank backend
 After=network.target mysqld.service
+Requires=mysqld.service
 
 [Service]
 User=thesetuprank
 WorkingDirectory=/opt/thesetuprank/backend
-ExecStart=/opt/thesetuprank/backend/backend
+ExecStart=/usr/bin/dotnet /opt/thesetuprank/backend/backend.dll
 EnvironmentFile=/etc/thesetuprank/backend.env
 Restart=always
 RestartSec=5
@@ -86,8 +85,7 @@ RestartSec=5
 WantedBy=multi-user.target
 ```
 
-`WorkingDirectory` matters because the app serves `wwwroot/openapi.yaml` with a
-relative path.
+Logs: `sudo journalctl -u thesetuprank-backend -f`.
 
 ### Configuration
 
@@ -102,40 +100,23 @@ ConnectionStrings__DefaultConnection=server=127.0.0.1;port=3306;database=thesetu
 Jwt__Key=...
 Authentication__Google__ClientId=...
 Authentication__Google__ClientSecret=...
-AWS__Region=ap-southeast-2
-S3__BucketName=thesetuprank-bucket
+CloudFront__BaseUrl=https://...
 ```
 
-There are no AWS access keys on the server. The instance has an IAM role, and
-the AWS SDK picks up its credentials automatically.
+The AWS region and bucket name come from `appsettings.json`. There are no AWS
+access keys on the server: the instance has an IAM role that can upload to the
+bucket's `images/` folder, and the AWS SDK picks up its credentials
+automatically.
 
 ### nginx
 
-```nginx
-server {
-    listen 443 ssl;
-    server_name thesetuprank.com;
-    ssl_certificate     /etc/ssl/cloudflare/origin.pem;
-    ssl_certificate_key /etc/ssl/cloudflare/origin.key;
-
-    root /var/www/thesetuprank;
-
-    location /api/ {
-        proxy_pass http://127.0.0.1:5000;
-        proxy_set_header Host $host;
-        proxy_set_header X-Forwarded-Proto $scheme;
-        client_max_body_size 20m;            # image uploads
-    }
-
-    location /assets/ {                      # hashed Vite files, safe to cache forever
-        add_header Cache-Control "public, max-age=31536000, immutable";
-    }
-
-    location / {
-        try_files $uri /index.html;          # SPA fallback for client-side routes
-    }
-}
-```
+- `/api/*` is proxied to Kestrel on `127.0.0.1:5000`, with `X-Forwarded-For`
+  and `X-Forwarded-Proto` set. The backend trusts forwarded headers from
+  loopback only.
+- `/assets/*` (hashed Vite files) is cached forever.
+- `index.html` is `no-cache`, so a new deploy shows up straight away.
+- Every other path falls back to `index.html` for client-side routes.
+- `www.thesetuprank.com` redirects to `thesetuprank.com`.
 
 ### DNS and TLS (Cloudflare)
 
@@ -144,8 +125,8 @@ server {
 - SSL/TLS mode: **Full (strict)**, with "Always Use HTTPS" on.
 - nginx uses a Cloudflare Origin CA certificate (free, 15-year validity, no
   renewal job needed).
-- Cloudflare caches JS, CSS, and image files at the edge. Only `index.html` and
-  API requests reach the instance.
+- Cloudflare caches JS and CSS files at the edge. Only `index.html` and API
+  requests reach the instance.
 
 Google OAuth redirect URI: `https://thesetuprank.com/api/signin-google`.
 
@@ -153,14 +134,11 @@ Google OAuth redirect URI: `https://thesetuprank.com/api/signin-google`.
 
 ```txt
 443   Cloudflare IP ranges only (https://www.cloudflare.com/ips/)
-22    open, SSH key authentication only (password and root login disabled)
+22    SSH, key authentication only (password and root login disabled)
 ```
 
 Nothing else is open. Port 80 isn't needed because Cloudflare redirects HTTP to
 HTTPS. Port 3306 is never opened, and MySQL listens on `127.0.0.1` only.
-
-Port 22 can't be limited to one IP because GitHub Actions runners don't have
-fixed addresses.
 
 ### Server Access
 
@@ -173,90 +151,76 @@ ssh -i ~/.ssh/thesetuprank.pem ec2-user@<elastic-ip>
 ## Production Database
 
 MySQL 8.4 runs on the EC2 instance, with its data directory on a dedicated EBS
-volume (gp3, 10 GB) mounted at `/data`.
+volume mounted at `/data`.
 
-Why not Amazon RDS: the expected traffic is small (up to 10-15 concurrent
-requests), and the smallest RDS instance costs more per month than this whole
-server. Keeping the data on its own volume means it survives if the instance is
-replaced, and the volume can be snapshotted and resized on its own. RDS is the
-next step if the site ever needs high availability or the maintenance stops
-being worth the savings.
+Why not Amazon RDS: traffic is small, and the smallest RDS instance costs more
+per month than this whole server. Keeping the data on its own volume means it
+survives if the instance is replaced, and the volume can be resized on its own.
+RDS is the next step if the site ever needs high availability.
 
 Because the database is self-hosted, these are handled manually:
 
-- **Backups**
-  - Daily EBS snapshots of the data volume with Amazon Data Lifecycle Manager,
-    keeping the last 7.
-  - A nightly `mysqldump`, compressed and uploaded to a separate S3 bucket
-    (`thesetuprank-backups`), with a lifecycle rule that deletes dumps after
-    30 days.
 - **Security**: `bind-address = 127.0.0.1`, no port 3306 in the security group,
   and a dedicated `thesetuprank` MySQL user with access to the `thesetuprank`
   database only.
-- **Memory**: `innodb_buffer_pool_size` kept small (128-256 MB) and
-  `performance_schema` turned off to fit in 1 GB of RAM.
+- **Memory**: `innodb_buffer_pool_size` kept small and `performance_schema`
+  turned off to fit in 1 GB of RAM.
 - **Updates**: OS and MySQL updates are applied manually with `dnf`.
+- **Backups**: none, on purpose. Losing the data is acceptable for a portfolio
+  site. If it gets real traffic, add daily EBS snapshots (Data Lifecycle
+  Manager) and a nightly `mysqldump` to S3.
 
-The AWS database started empty. Data from the Azure SQL database was not
-migrated.
-
-## Image Storage (S3)
+## Image Storage (S3 + CloudFront)
 
 Images are stored in a private S3 bucket (`thesetuprank-bucket`) with Block
-Public Access on.
+Public Access on. A CloudFront distribution reads the bucket through Origin
+Access Control, so CloudFront is the only way to load them.
 
-Upload flow:
+Upload flow (`POST /api/setups`, up to 4 photos, handled one at a time by
+`Services/S3ImageStorageService.cs`):
 
 ```txt
 Browser --multipart--> POST /api/setups
-  -> backend validates, resizes, and compresses the image
-  -> backend uploads it to S3 (PutObject)
-  -> the S3 object key is saved in the database
+  -> validate: under 10 MB, JPEG/PNG/WebP detected from the file content, at most 50 MP
+  -> process: fix phone rotation, shrink to fit 1600x1600, strip EXIF/GPS metadata
+  -> encode as WebP and upload to S3 as images/<guid>.webp
+  -> save the S3 key and display order as an Image row
 ```
 
 Serving flow:
 
 ```txt
-GET /api/... -> backend creates a presigned GET URL for each image key
-             -> browser loads the image directly from S3
+GET /api/... -> backend returns {CloudFront:BaseUrl}/{key} for each image
+             -> browser loads the image from CloudFront
 ```
 
-- The database stores the S3 object key, not a URL, because presigned URLs expire.
-- Presigned URLs are short-lived (about 1 hour). Signing them with a fixed
-  expiry window (for example, rounded to the hour) returns the same URL for a
-  while, so browsers can cache the images.
-- The bucket doesn't need a CORS rule: uploads go through the backend, and
-  `<img>` tags don't need CORS.
-- The instance's IAM role allows `s3:PutObject`, `s3:GetObject`, and
-  `s3:DeleteObject` on `thesetuprank-bucket`, and `s3:PutObject` on
-  `thesetuprank-backups`.
+- The database stores the S3 key, not a URL, so the image domain can change
+  without touching the data.
+- Objects are uploaded with `Cache-Control: public, max-age=31536000, immutable`.
+  Keys are never reused, so the images can be cached forever.
 
-## Deployment (CI/CD)
+## Deployment
 
-Pushing to `main` runs a GitHub Actions workflow that builds both apps and
-deploys them over SSH.
+There's no CI/CD. To ship a change, push to `main`, then on the server:
+
+```bash
+cd ~/rate-setup && git pull --ff-only && ./deploy.sh
+```
+
+`deploy.sh` (in the repo root) builds both apps on the instance, copies the
+output into place, and restarts the backend:
 
 ```txt
-1. dotnet publish backend/backend.csproj -c Release -r linux-arm64 --self-contained
+1. dotnet publish backend/backend.csproj -c Release
 2. npm ci && npm run build   (in frontend/, output in frontend/build/client)
 3. rsync backend publish output  -> /opt/thesetuprank/backend/
 4. rsync frontend/build/client/  -> /var/www/thesetuprank/
-5. ssh: sudo systemctl restart thesetuprank-backend
+5. sudo systemctl restart thesetuprank-backend, and print the logs if it fails
 ```
 
-The backend is published as self-contained, so the server doesn't need the .NET
-runtime installed. EF Core migrations run automatically when the service starts.
-
-The workflow connects as a `deploy` user whose `sudo` access is limited to
-restarting the backend service.
-
-Required GitHub Actions secrets:
-
-```txt
-EC2_HOST          Elastic IP of the instance
-EC2_SSH_KEY       private key for the deploy user
-EC2_KNOWN_HOSTS   the server's host key, so the workflow can verify it
-```
+The server has the .NET 10 SDK and Node 22 installed for the builds. EF Core
+migrations run automatically when the service starts. Builds take a few minutes
+on a `t4g.micro`, and the site stays up until the restart.
 
 ## Estimated Cost
 
@@ -266,49 +230,12 @@ current prices.
 ```txt
 EC2 t4g.micro                         ~8 USD
 Public IPv4 address (Elastic IP)      ~3.65 USD
-EBS gp3 (8 GB root + 10 GB data)      ~2 USD
-Snapshots, S3, data transfer          ~1 USD at current traffic
+EBS gp3 (root + data volume)          ~2 USD
+S3, CloudFront, data transfer         ~1 USD at current traffic
 Total                                 ~13-15 USD/month
 ```
 
 Moving to `t4g.small` adds about 8 USD/month.
-
-## Migration Status
-
-Done:
-
-- [x] Switch EF Core from SQL Server to MySQL (`MySql.EntityFrameworkCore`)
-- [x] Reset migrations to a single MySQL `InitialCreate`
-- [x] Remove the local SQL Server Docker setup
-- [x] Connect to S3 from the backend (`/api/dev/s3-test`, development only)
-
-Code changes:
-
-- [ ] Rewrite image upload in `SetupEndpoints.cs` for S3 (replace Azure SAS)
-- [ ] Store S3 object keys instead of image URLs, and return presigned URLs
-- [ ] Remove the `Azure.Storage.Blobs` package and `Azure:*` config
-- [ ] Change the Data Protection keys path in `Program.cs` from
-      `/home/DataProtection-Keys` to `/data/keys`
-- [ ] Remove `App:PublicHost` handling if nginx passes the host through correctly
-- [ ] Remove `frontend/functions/` (Cloudflare Pages proxy)
-
-Infrastructure:
-
-- [ ] EC2 instance, Elastic IP, IAM role, and security group
-- [ ] EBS data volume mounted at `/data`
-- [ ] MySQL, nginx, systemd service, and the config file
-- [ ] Cloudflare Origin CA certificate
-- [ ] Backups: Data Lifecycle Manager policy and nightly `mysqldump`
-- [ ] GitHub Actions SSH deploy workflow
-
-Cutover:
-
-- [ ] Delete the Azure workflows (`deploy-backend.yml`,
-      `main_setuprank-backend.yml`) before merging into `main`
-- [ ] Point `thesetuprank.com` at the Elastic IP and remove the Cloudflare
-      Pages custom domain
-- [ ] After about a week, delete the Azure resources (App Service, Azure SQL,
-      Blob Storage) and the Cloudflare Pages project
 
 ## Local Development
 
@@ -334,17 +261,27 @@ CREATE USER 'thesetuprank'@'localhost' IDENTIFIED BY '<password>';
 GRANT ALL PRIVILEGES ON thesetuprank.* TO 'thesetuprank'@'localhost';
 ```
 
-Store the connection string in user-secrets (run from `backend/`):
-
-```bash
-dotnet user-secrets set "ConnectionStrings:DefaultConnection" "server=localhost;port=3306;database=thesetuprank;user=thesetuprank;password=<password>"
-```
-
 Stop MySQL:
 
 ```bash
 brew services stop mysql@8.4
 ```
+
+### Config (user-secrets)
+
+Locally, config lives in user-secrets (run from `backend/`):
+
+```bash
+dotnet user-secrets set "ConnectionStrings:DefaultConnection" "server=localhost;port=3306;database=thesetuprank;user=thesetuprank;password=<password>"
+dotnet user-secrets set "Jwt:Key" "<random string, at least 32 bytes>"
+dotnet user-secrets set "Authentication:Google:ClientId" "<google client id>"
+dotnet user-secrets set "Authentication:Google:ClientSecret" "<google client secret>"
+dotnet user-secrets set "CloudFront:BaseUrl" "https://<distribution>.cloudfront.net"
+dotnet user-secrets set "App:FrontendUrl" "http://localhost:5173"
+```
+
+`App:FrontendUrl` is where the backend sends you after Google sign-in in
+development (the Vite dev server).
 
 ### S3
 
@@ -353,6 +290,26 @@ Locally, the backend uses the `thesetuprank` AWS CLI profile (set in
 
 ```bash
 aws login --profile thesetuprank
+```
+
+### Running
+
+```bash
+dotnet run --launch-profile http
+```
+
+The API runs on http://localhost:5065, and Swagger UI is at
+http://localhost:5065/swagger.
+
+### OpenAPI
+
+The OpenAPI document is generated from the endpoints and served at
+`/openapi/v1.json` and `/openapi/v1.yaml`. `openapi.yaml` in this folder is a
+snapshot. Regenerate it after changing an endpoint or a DTO, with the backend
+running (from the repo root):
+
+```bash
+curl -s http://localhost:5065/openapi/v1.yaml -o backend/openapi.yaml
 ```
 
 ### Migrations
@@ -371,6 +328,4 @@ To add a new migration after changing a model:
 dotnet ef migrations add MigrationName
 ```
 
-The migration history was reset when the database moved from SQL Server to
-MySQL. `Migrations/` now starts from a single `InitialCreate` migration
-generated for MySQL.
+The migration history starts from a single MySQL `InitialCreate` migration.

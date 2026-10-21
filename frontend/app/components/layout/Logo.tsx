@@ -1,8 +1,4 @@
-import { useWeekCountdown } from "~/hooks/useWeekCountdown";
-
 export function Logo() {
-  const timeLeft = useWeekCountdown();
-
   return (
     <div className="hidden flex-col items-center py-8 sm:flex">
       <h1
@@ -27,15 +23,6 @@ export function Logo() {
         }}
       >
         rate the best battlestations
-      </p>
-      <p
-        className="mt-3 uppercase text-zinc-300 font-light"
-        style={{
-          fontSize: "10px",
-          letterSpacing: "0.25em",
-        }}
-      >
-        week ends in {timeLeft.d}D {timeLeft.h}H {timeLeft.m}M
       </p>
     </div>
   );
