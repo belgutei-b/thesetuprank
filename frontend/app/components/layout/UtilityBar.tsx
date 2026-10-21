@@ -4,6 +4,14 @@ import { Menu, X } from "lucide-react";
 import { useAuth } from "~/context/AuthContext";
 import { Button } from "~/components/ui/button";
 
+function getWeekOf() {
+  const now = new Date();
+  const day = now.getDay();
+  const monday = new Date(now);
+  monday.setDate(now.getDate() - ((day + 6) % 7));
+  return monday.toLocaleDateString("en-AU", { month: "short", day: "numeric" });
+}
+
 const menuItemClass =
   "flex h-12 w-full cursor-pointer items-center border-t border-line text-xs uppercase tracking-widest";
 
@@ -29,34 +37,31 @@ export function UtilityBar() {
     <>
       {/* Tablet and desktop */}
       <div className="hidden items-center justify-between border-b border-line px-6 py-2 text-xs uppercase tracking-widest text-muted sm:flex">
-        <Link to="/" className="transition-colors hover:text-text">
-          Home
-        </Link>
+        <span>EST. 2026 &nbsp;·&nbsp; WEEK OF {getWeekOf()}</span>
 
         <div className="flex items-center gap-4">
           {voteCount !== null && <span>{voteCount} votes</span>}
-          {user && (
-            <Link
-              to="/profile"
-              className="transition-colors hover:text-text"
-            >
-              My Profile
-            </Link>
-          )}
-          {/* Shown to everyone: /upload sends signed-out users to sign in */}
-          <Link
-            to="/upload"
-            className="transition-colors hover:text-text"
-          >
-            + Add Setup
-          </Link>
           {user ? (
-            <button
-              onClick={handleLogout}
-              className="transition-colors hover:text-text cursor-pointer"
-            >
-              Sign Out
-            </button>
+            <>
+              <Link
+                to="/profile"
+                className="transition-colors hover:text-text"
+              >
+                My Profile
+              </Link>
+              <Link
+                to="/upload"
+                className="transition-colors hover:text-text"
+              >
+                + Add Setup
+              </Link>
+              <button
+                onClick={handleLogout}
+                className="transition-colors hover:text-text cursor-pointer"
+              >
+                Sign Out
+              </button>
+            </>
           ) : (
             <Link
               to="/sign-in"
@@ -68,18 +73,8 @@ export function UtilityBar() {
         </div>
       </div>
 
-      {/* Phone: dims and blurs the page behind the open menu, tap it to close */}
-      {isMenuOpen && (
-        <div
-          aria-hidden="true"
-          onClick={closeMenu}
-          className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm sm:hidden"
-        />
-      )}
-
-      {/* Phone. z-50 keeps the bar and its menu above the backdrop, which in
-          turn sits above the vote page's z-30 bottom bar */}
-      <div className="relative z-50 border-b border-line bg-bg sm:hidden">
+      {/* Phone */}
+      <div className="relative border-b border-line sm:hidden">
         <div className="flex h-13 items-center justify-between pl-4 pr-1">
           <Link
             to="/"
@@ -108,28 +103,28 @@ export function UtilityBar() {
           >
             {voteCount !== null && (
               <p className="py-3.5 text-xs uppercase tracking-widest text-faint">
-                {voteCount} votes
+                {voteCount} votes this week
               </p>
             )}
-            {user && (
-              <Link to="/profile" onClick={closeMenu} className={menuItemClass}>
-                My Profile
-              </Link>
-            )}
-            <Link to="/upload" onClick={closeMenu} className={menuItemClass}>
-              + Add Setup
-            </Link>
             {user ? (
-              <button
-                type="button"
-                onClick={() => {
-                  closeMenu();
-                  handleLogout();
-                }}
-                className={`${menuItemClass} text-faint`}
-              >
-                Sign Out
-              </button>
+              <>
+                <Link to="/profile" onClick={closeMenu} className={menuItemClass}>
+                  My Profile
+                </Link>
+                <Link to="/upload" onClick={closeMenu} className={menuItemClass}>
+                  + Add Setup
+                </Link>
+                <button
+                  type="button"
+                  onClick={() => {
+                    closeMenu();
+                    handleLogout();
+                  }}
+                  className={`${menuItemClass} text-faint`}
+                >
+                  Sign Out
+                </button>
+              </>
             ) : (
               <Link to="/sign-in" onClick={closeMenu} className={menuItemClass}>
                 Sign In

@@ -23,6 +23,10 @@ public static class RankingEndpoints
                 {
                     try
                     {
+                        DateTime now = DateTime.UtcNow;
+                        int daysFromMonday = ((int)now.DayOfWeek + 6) % 7;
+                        DateTime weekStart = now.Date.AddDays(-daysFromMonday);
+
                         // fetch the top 20 setups based on the Ranking
                         var setups = await db
                             .Setups.Include(s => s.Images)
@@ -42,10 +46,14 @@ public static class RankingEndpoints
                                 FeaturedAt = s.FeaturedAt,
                                 CreatedAt = s.CreatedAt,
                                 Wins = db.Battles.Count(b =>
-                                    b.SubmittedAt.HasValue && b.WinnerId == s.Id
+                                    b.CreatedAt >= weekStart
+                                    && b.SubmittedAt.HasValue
+                                    && b.WinnerId == s.Id
                                 ),
                                 Losses = db.Battles.Count(b =>
-                                    b.SubmittedAt.HasValue && b.LoserId == s.Id
+                                    b.CreatedAt >= weekStart
+                                    && b.SubmittedAt.HasValue
+                                    && b.LoserId == s.Id
                                 ),
                             })
                             .ToListAsync();

@@ -188,8 +188,15 @@ public static class VoteEndpoints
                 {
                     try
                     {
+                        DateTime now = DateTime.UtcNow;
+                        int daysFromMonday = ((int)now.DayOfWeek + 6) % 7;
+                        // AddDays method gives the day in midnight -> hour and minute is zero
+                        DateTime timeCutoff = now.Date.AddDays(-daysFromMonday);
+
                         var count = await db
-                            .Battles.Where(u => u.SubmittedAt.HasValue)
+                            .Battles.Where(u =>
+                                u.SubmittedAt.HasValue && u.SubmittedAt >= timeCutoff
+                            )
                             .CountAsync();
 
                         return Results.Ok(new VoteCountResDto { Count = count });
