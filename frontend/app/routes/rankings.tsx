@@ -33,7 +33,7 @@ export default function Rankings() {
     <div className="py-8 px-6">
       <div className="flex items-center justify-between mb-4">
         <p className="text-zinc-300 text-[11px] tracking-[2.5px] uppercase font-sans m-0">
-          This Week's Rankings
+          Rankings
         </p>
         <p className="text-zinc-300 text-[11px] tracking-[2.5px] uppercase font-sans m-0">
           {numberOfSetups} Setups

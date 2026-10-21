@@ -26,8 +26,8 @@ export default function Upload() {
     return <div>Loading...</div>;
   }
   if (!user) {
-    // toast message
-    return <Navigate to="/sign-in" replace />;
+    // the sign-in page reads this state to explain why the user landed there
+    return <Navigate to="/sign-in" replace state={{ reason: "upload" }} />;
   }
 
   async function handleSubmit(e: { preventDefault: () => void }) {
