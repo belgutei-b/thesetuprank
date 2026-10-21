@@ -1,19 +1,6 @@
-import { useEffect } from "react";
-import { Link, useLocation } from "react-router";
-import toast from "react-hot-toast";
+import { Link } from "react-router";
 
 export default function SignIn() {
-  // set by the /upload redirect when a signed-out user tries to add a setup
-  const { state } = useLocation();
-  const cameFromUpload = (state as { reason?: string } | null)?.reason === "upload";
-
-  useEffect(() => {
-    // the id stops a second toast when the effect runs twice (React dev mode)
-    if (cameFromUpload) {
-      toast.error("Sign in first to add a setup", { id: "sign-in-required" });
-    }
-  }, [cameFromUpload]);
-
   return (
     <div className="flex flex-col items-center pt-10 px-6">
       <div className="flex flex-col items-center gap-8 w-full max-w-[320px]">
