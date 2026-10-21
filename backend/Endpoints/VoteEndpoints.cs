@@ -181,7 +181,7 @@ public static class VoteEndpoints
             .AllowAnonymous()
             .Produces<VoteSubmitResDto>(200);
 
-        // number of votes (all votes)
+        // number of votes (all-time)
         app.MapGet(
                 "/api/vote/count",
                 async (AppDbContext db, ILogger<Program> logger) =>

@@ -10,7 +10,7 @@ public static class RankingEndpoints
 {
     public static void MapRankingEndpoints(this WebApplication app)
     {
-        // rating: stars with 800 for all setups
+        // rating: starts with 800 for all setups
         // wins & losses
         app.MapGet(
                 "/api/ranking",
