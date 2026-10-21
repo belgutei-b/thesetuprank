@@ -10,8 +10,8 @@ public static class RankingEndpoints
 {
     public static void MapRankingEndpoints(this WebApplication app)
     {
-        // rating: changed 800 for all setups at the beginning of the week
-        // wins & losses:  only includes this week
+        // rating: stars with 800 for all setups
+        // wins & losses
         app.MapGet(
                 "/api/ranking",
                 async (
@@ -23,10 +23,6 @@ public static class RankingEndpoints
                 {
                     try
                     {
-                        DateTime now = DateTime.UtcNow;
-                        int daysFromMonday = ((int)now.DayOfWeek + 6) % 7;
-                        DateTime weekStart = now.Date.AddDays(-daysFromMonday);
-
                         // fetch the top 20 setups based on the Ranking
                         var setups = await db
                             .Setups.Include(s => s.Images)
@@ -46,14 +42,10 @@ public static class RankingEndpoints
                                 FeaturedAt = s.FeaturedAt,
                                 CreatedAt = s.CreatedAt,
                                 Wins = db.Battles.Count(b =>
-                                    b.CreatedAt >= weekStart
-                                    && b.SubmittedAt.HasValue
-                                    && b.WinnerId == s.Id
+                                    b.SubmittedAt.HasValue && b.WinnerId == s.Id
                                 ),
                                 Losses = db.Battles.Count(b =>
-                                    b.CreatedAt >= weekStart
-                                    && b.SubmittedAt.HasValue
-                                    && b.LoserId == s.Id
+                                    b.SubmittedAt.HasValue && b.LoserId == s.Id
                                 ),
                             })
                             .ToListAsync();
