@@ -107,6 +107,8 @@ public static class VoteEndpoints
             .Produces<VoteGetResDto>(200);
 
         // SubmittedAt & VoterId
+        // maybe it wasn't necessary to check the winner or loser id at all
+        // currently it is pretty strict on the response from the web
         app.MapPost(
                 "/api/vote",
                 async (
@@ -122,21 +124,35 @@ public static class VoteEndpoints
                         var winnerId = request.WinnerId;
                         var loserId = request.LoserId;
 
-                        // current rating of winner and loser
+                        // retrieving the battle
                         var battle =
                             await db
                                 .Battles.Include(b => b.Setup1)
                                 .Include(b => b.Setup2)
                                 .FirstOrDefaultAsync(b => b.Id == battleId)
-                            ?? throw new Exception("Battle not found");
+                            ?? throw new CustomException("Battle not found");
 
-                        // todo: ensure that currently submittedAt is null (not duplicated request)
-                        // todo: validate the ids first
-                        var winner = (winnerId == battle.Setup1Id) ? battle.Setup1 : battle.Setup2;
-                        var loser = (loserId == battle.Setup1Id) ? battle.Setup1 : battle.Setup2;
+                        // making sure that it is not duplicated vote submission
+                        if (battle.SubmittedAt is not null)
+                        {
+                            throw new CustomException("Vote already submitted");
+                        }
+
+                        var winner =
+                            (winnerId == battle.Setup1Id) ? battle.Setup1
+                            : (winnerId == battle.Setup2Id) ? battle.Setup2
+                            : null;
+                        var loser =
+                            (loserId == battle.Setup1Id) ? battle.Setup1
+                            : (loserId == battle.Setup2Id) ? battle.Setup2
+                            : null;
+
+                        if (winner is null || loser is null || winnerId == loserId)
+                        {
+                            throw new CustomException("Invalid winner or loser id");
+                        }
 
                         // calculate rank change of each setup
-
                         var winnerExpectedScore =
                             1.0 / (1 + Math.Pow(10, -(winner.Rating - loser.Rating) / 400.0));
                         var loserExpectedScore =
@@ -170,6 +186,10 @@ public static class VoteEndpoints
                                 LoserDiff = (int)Math.Round(loserNewRating - loserOldRating),
                             }
                         );
+                    }
+                    catch (CustomException)
+                    {
+                        return Results.BadRequest("Invalid vote.");
                     }
                     catch (Exception ex)
                     {

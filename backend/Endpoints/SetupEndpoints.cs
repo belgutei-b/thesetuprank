@@ -12,6 +12,7 @@ public static class SetupEndpoints
     private const int MaxNameLength = 40;
     private const int MaxDescriptionLength = 400;
     private const int MaxImageNumber = 4;
+    private const int MaxSetupNumber = 8;
 
     public static void MapSetupEndpoints(this WebApplication app)
     {
@@ -108,30 +109,47 @@ public static class SetupEndpoints
                 {
                     try
                     {
+                        // retrieving the userId & user
+                        var userId =
+                            (ctx.User.FindFirst(ClaimTypes.NameIdentifier)?.Value)
+                            ?? throw new Exception("null userId");
+                        var userGuid = new Guid(userId);
+
+                        // check if the number of setup uploaded by user exceeds the limit
+                        var numberOfSetups = await db.Setups.CountAsync(u =>
+                            u.CreatedBy.Equals(userGuid)
+                        );
+                        if (numberOfSetups >= MaxSetupNumber)
+                        {
+                            throw new CustomException(
+                                $"You can upload up to {MaxSetupNumber} setups"
+                            );
+                        }
+
                         // check length of the name (40 chars) & description(400 chars)
                         if (setupPostDto.Name.Length > MaxNameLength)
                         {
-                            throw new Exception($"Length of name exceeds {MaxNameLength} chars");
+                            throw new CustomException(
+                                $"Length of name exceeds {MaxNameLength} chars"
+                            );
                         }
                         if (setupPostDto.Description.Length > MaxDescriptionLength)
                         {
-                            throw new Exception(
+                            throw new CustomException(
                                 $"Length of description exceeds {MaxDescriptionLength} chars"
                             );
                         }
                         // check the number of images
                         if (setupPostDto.SetupImages.Count > MaxImageNumber)
                         {
-                            throw new Exception($"Upload up to {MaxImageNumber} images per setup");
+                            throw new CustomException(
+                                $"Upload up to {MaxImageNumber} images per setup"
+                            );
                         }
-
-                        var userId =
-                            (ctx.User.FindFirst(ClaimTypes.NameIdentifier)?.Value)
-                            ?? throw new Exception("null userId");
 
                         var newSetup = new backend.Models.Setup
                         {
-                            CreatedBy = new Guid(userId),
+                            CreatedBy = userGuid,
                             Name = setupPostDto.Name,
                             Description = setupPostDto.Description,
                         };
@@ -160,9 +178,9 @@ public static class SetupEndpoints
                             }
                         );
                     }
-                    catch (InvalidImageException ex)
+                    catch (Exception ex) when (ex is CustomException || ex is InvalidImageException)
                     {
-                        // Returns 400
+                        // Returns 400 & frontend will display custom error message
                         return Results.BadRequest(ex.Message);
                     }
                     catch (Exception ex)

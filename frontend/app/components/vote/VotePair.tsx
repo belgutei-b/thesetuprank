@@ -15,6 +15,14 @@ type Props = {
 // How long the vote result stays on screen before the next pairing loads
 const AUTO_ADVANCE_MS = 1000;
 
+// Width of the battle (also used by the loading skeleton in home.tsx). Grows
+// with the screen so the photos fill big monitors, but only as far as the
+// photos still fit above the fold: everything above them takes ~440px, and
+// each 4:3 photo is (width - 128px) / 2 wide. Never narrower than 1040px, the
+// size on a 13" laptop
+export const BATTLE_WIDTH =
+  "max-w-[clamp(1040px,calc((100dvh-440px)*8/3+128px),1840px)]";
+
 function formatDiff(diff: number) {
   return `${diff > 0 ? "+" : ""}${diff} pts`;
 }
@@ -105,7 +113,7 @@ export default function VotePair({ battle, onNext }: Props) {
 
       {/* One column on phones. From sm up: A | vs | B, with rows for header,
           photo, thumbnails and description */}
-      <div className="mx-auto grid max-w-[1040px] grid-cols-1 gap-y-1.5 px-4 pt-3 pb-28 sm:grid-cols-[minmax(0,1fr)_40px_minmax(0,1fr)] sm:gap-x-5 sm:gap-y-3 sm:px-6 sm:pt-0 sm:pb-0">
+      <div className={`mx-auto grid ${BATTLE_WIDTH} grid-cols-1 gap-y-1.5 px-4 pt-3 pb-28 sm:grid-cols-[minmax(0,1fr)_40px_minmax(0,1fr)] sm:gap-x-5 sm:gap-y-3 sm:px-6 sm:pt-0 sm:pb-0`}>
         <SetupColumn
           side="A"
           setup={battle.setupA}

@@ -56,7 +56,13 @@ export default function Upload() {
       navigate("/profile");
     } catch (err) {
       setStatus("error");
-      toast.error("Something went wrong. Please try again.");
+
+      if (err instanceof Error) {
+        // displaying custom error message that could be caused by user's input
+        toast.error(err.message);
+      } else {
+        toast.error("Something went wrong. Please try again.");
+      }
     }
   }
 

@@ -3,7 +3,7 @@ import type { Route } from "./+types/home";
 import type { ApiVoteGet } from "~/api/types";
 import { getVote } from "~/api/vote";
 import { Button } from "~/components/ui/button";
-import VotePair from "~/components/vote/VotePair";
+import VotePair, { BATTLE_WIDTH } from "~/components/vote/VotePair";
 
 export function meta({}: Route.MetaArgs) {
   return [
@@ -62,7 +62,7 @@ export default function Home() {
   // first load
   if (!battle) {
     return (
-      <div className="mx-auto grid max-w-[1040px] grid-cols-1 gap-y-[76px] px-4 pt-[62px] sm:grid-cols-2 sm:gap-x-20 sm:px-6 sm:pt-[99px]">
+      <div className={`mx-auto grid ${BATTLE_WIDTH} grid-cols-1 gap-y-[76px] px-4 pt-[62px] sm:grid-cols-2 sm:gap-x-20 sm:px-6 sm:pt-[99px]`}>
         {[0, 1].map((i) => (
           <div
             key={i}

@@ -21,6 +21,15 @@ export async function createSetup(setup: {
     // headers: { "Content-Type": "application/json" },
     body: formData,
   });
+
+  // issue with users input
+  if (res.status === 400) {
+    const body = await res.json();
+    if (typeof body === "string") {
+      throw new Error(body);
+    }
+  }
+
   if (!res.ok) throw new Error("Failed to create setup");
 }
 
