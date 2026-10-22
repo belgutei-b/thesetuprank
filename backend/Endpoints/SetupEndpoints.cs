@@ -121,26 +121,30 @@ public static class SetupEndpoints
                         );
                         if (numberOfSetups >= MaxSetupNumber)
                         {
-                            throw new Exception(
-                                $"Number of uploaded setups exceeds ${MaxSetupNumber}"
+                            throw new CustomException(
+                                $"Number of uploaded setups exceeds {MaxSetupNumber}"
                             );
                         }
 
                         // check length of the name (40 chars) & description(400 chars)
                         if (setupPostDto.Name.Length > MaxNameLength)
                         {
-                            throw new Exception($"Length of name exceeds {MaxNameLength} chars");
+                            throw new CustomException(
+                                $"Length of name exceeds {MaxNameLength} chars"
+                            );
                         }
                         if (setupPostDto.Description.Length > MaxDescriptionLength)
                         {
-                            throw new Exception(
+                            throw new CustomException(
                                 $"Length of description exceeds {MaxDescriptionLength} chars"
                             );
                         }
                         // check the number of images
                         if (setupPostDto.SetupImages.Count > MaxImageNumber)
                         {
-                            throw new Exception($"Upload up to {MaxImageNumber} images per setup");
+                            throw new CustomException(
+                                $"Upload up to {MaxImageNumber} images per setup"
+                            );
                         }
 
                         var newSetup = new backend.Models.Setup
@@ -174,9 +178,9 @@ public static class SetupEndpoints
                             }
                         );
                     }
-                    catch (InvalidImageException ex)
+                    catch (Exception ex) when (ex is CustomException || ex is InvalidImageException)
                     {
-                        // Returns 400
+                        // Returns 400 & frontend will display custom error message
                         return Results.BadRequest(ex.Message);
                     }
                     catch (Exception ex)
