@@ -12,6 +12,7 @@ public static class SetupEndpoints
     private const int MaxNameLength = 40;
     private const int MaxDescriptionLength = 400;
     private const int MaxImageNumber = 4;
+    private const int MaxSetupNumber = 8;
 
     public static void MapSetupEndpoints(this WebApplication app)
     {
@@ -108,6 +109,23 @@ public static class SetupEndpoints
                 {
                     try
                     {
+                        // retrieving the userId & user
+                        var userId =
+                            (ctx.User.FindFirst(ClaimTypes.NameIdentifier)?.Value)
+                            ?? throw new Exception("null userId");
+                        var user = new Guid(userId);
+
+                        // check if the number of setup uploaded by user exceeds the limit
+                        var numberOfSetups = await db.Setups.CountAsync(u =>
+                            u.CreatedBy.Equals(user)
+                        );
+                        if (numberOfSetups >= MaxSetupNumber)
+                        {
+                            throw new Exception(
+                                $"Number of uploaded setups exceeds ${MaxSetupNumber}"
+                            );
+                        }
+
                         // check length of the name (40 chars) & description(400 chars)
                         if (setupPostDto.Name.Length > MaxNameLength)
                         {
@@ -124,10 +142,6 @@ public static class SetupEndpoints
                         {
                             throw new Exception($"Upload up to {MaxImageNumber} images per setup");
                         }
-
-                        var userId =
-                            (ctx.User.FindFirst(ClaimTypes.NameIdentifier)?.Value)
-                            ?? throw new Exception("null userId");
 
                         var newSetup = new backend.Models.Setup
                         {
