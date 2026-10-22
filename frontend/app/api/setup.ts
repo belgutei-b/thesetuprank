@@ -24,8 +24,10 @@ export async function createSetup(setup: {
 
   // issue with users input
   if (res.status === 400) {
-    const tmp = await res.json() as string;
-    throw new Error(tmp);
+    const body = await res.json();
+    if (typeof body === "string") {
+      throw new Error(body);
+    }
   }
 
   if (!res.ok) throw new Error("Failed to create setup");

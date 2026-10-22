@@ -130,7 +130,7 @@ public static class VoteEndpoints
                                 .Battles.Include(b => b.Setup1)
                                 .Include(b => b.Setup2)
                                 .FirstOrDefaultAsync(b => b.Id == battleId)
-                            ?? throw new Exception("Battle not found");
+                            ?? throw new CustomException("Battle not found");
 
                         // making sure that it is not duplicated vote submission
                         if (battle.SubmittedAt is not null)
@@ -147,7 +147,7 @@ public static class VoteEndpoints
                             : (loserId == battle.Setup2Id) ? battle.Setup2
                             : null;
 
-                        if (winner is null || loser is null)
+                        if (winner is null || loser is null || winnerId == loserId)
                         {
                             throw new CustomException("Invalid winner or loser id");
                         }
@@ -186,6 +186,10 @@ public static class VoteEndpoints
                                 LoserDiff = (int)Math.Round(loserNewRating - loserOldRating),
                             }
                         );
+                    }
+                    catch (CustomException)
+                    {
+                        return Results.BadRequest("Invalid vote.");
                     }
                     catch (Exception ex)
                     {

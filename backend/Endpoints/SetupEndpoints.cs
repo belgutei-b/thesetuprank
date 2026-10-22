@@ -113,16 +113,16 @@ public static class SetupEndpoints
                         var userId =
                             (ctx.User.FindFirst(ClaimTypes.NameIdentifier)?.Value)
                             ?? throw new Exception("null userId");
-                        var user = new Guid(userId);
+                        var userGuid = new Guid(userId);
 
                         // check if the number of setup uploaded by user exceeds the limit
                         var numberOfSetups = await db.Setups.CountAsync(u =>
-                            u.CreatedBy.Equals(user)
+                            u.CreatedBy.Equals(userGuid)
                         );
                         if (numberOfSetups >= MaxSetupNumber)
                         {
                             throw new CustomException(
-                                $"Number of uploaded setups exceeds {MaxSetupNumber}"
+                                $"You can upload up to {MaxSetupNumber} setups"
                             );
                         }
 
@@ -149,7 +149,7 @@ public static class SetupEndpoints
 
                         var newSetup = new backend.Models.Setup
                         {
-                            CreatedBy = new Guid(userId),
+                            CreatedBy = userGuid,
                             Name = setupPostDto.Name,
                             Description = setupPostDto.Description,
                         };
