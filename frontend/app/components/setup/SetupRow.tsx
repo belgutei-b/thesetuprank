@@ -21,7 +21,8 @@ const rankColor = (i: number) =>
 
 // One setup in a list (rankings, profile): the same photo stage and full
 // size viewer as the vote page, just smaller. Clicking the photo opens it
-// full size
+// full size. The photo, rank and name grow on big monitors (from 1536px and
+// 1920px wide)
 export default function SetupRow({ setup, rank }: Props) {
   const [photoIndex, setPhotoIndex] = useState(0);
   const [isViewerOpen, setIsViewerOpen] = useState(false);
@@ -29,10 +30,10 @@ export default function SetupRow({ setup, rank }: Props) {
   const rating = Number(setup.rating).toLocaleString();
 
   return (
-    <div className="flex items-center gap-3 py-3 border-b border-[#1c1c1c] sm:gap-4">
+    <div className="flex items-center gap-3 py-3 border-b border-[#1c1c1c] sm:gap-4 2xl:gap-6 2xl:py-4">
       {rank !== undefined && (
         <div
-          className={`w-8 shrink-0 text-center font-serif italic text-2xl sm:w-14 sm:text-[28px] ${rankColor(rank)}`}
+          className={`w-8 shrink-0 text-center font-serif italic text-2xl sm:w-14 sm:text-[28px] 2xl:w-20 2xl:text-4xl ${rankColor(rank)}`}
         >
           {rank + 1}
         </div>
@@ -40,7 +41,7 @@ export default function SetupRow({ setup, rank }: Props) {
 
       <PhotoStage
         size="small"
-        className="w-32 shrink-0 sm:w-48"
+        className="w-32 shrink-0 sm:w-48 2xl:w-72 min-[120rem]:w-80"
         name={setup.name}
         photos={photos}
         index={photoIndex}
@@ -51,7 +52,7 @@ export default function SetupRow({ setup, rank }: Props) {
       />
 
       <div className="flex-1 min-w-0">
-        <p className="font-serif text-lg font-medium text-[#e8e8e8] m-0 whitespace-nowrap overflow-hidden text-ellipsis">
+        <p className="font-serif text-lg font-medium text-[#e8e8e8] m-0 whitespace-nowrap overflow-hidden text-ellipsis 2xl:text-2xl">
           {setup.name}
         </p>
         <p className="text-[11px] tracking-[1.5px] uppercase text-[#666] font-sans mt-1 mb-0">
